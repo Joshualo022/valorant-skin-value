@@ -18,9 +18,10 @@ model User {
   displayName String   @map("display_name")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  ownedSkins    UserOwnedSkin[]
-  reviews       Review[]
-  flagsFiled    ReviewFlag[]    @relation("FlagsFiledByUser")
+  ownedSkins     UserOwnedSkin[]
+  activeLoadouts ActiveLoadout[]
+  reviews        Review[]
+  flagsFiled     ReviewFlag[]    @relation("FlagsFiledByUser")
 
   @@map("users")
 }
@@ -30,7 +31,8 @@ model Weapon {
   name       String @unique // "Vandal", "Phantom", etc.
   weaponType String @map("weapon_type") // rifle, sidearm, smg, etc.
 
-  skins Skin[]
+  skins          Skin[]
+  activeLoadouts ActiveLoadout[]
 
   @@map("weapons")
 }
@@ -66,9 +68,10 @@ model Skin {
   weapon      Weapon        @relation(fields: [weaponId], references: [id])
   skinLine    SkinLine?     @relation(fields: [skinLineId], references: [id])
   contentTier ContentTier   @relation(fields: [contentTierId], references: [id])
-  chromas     Chroma[]
-  ownedBy     UserOwnedSkin[]
-  reviews     Review[]
+  chromas        Chroma[]
+  ownedBy        UserOwnedSkin[]
+  activeLoadouts ActiveLoadout[]
+  reviews        Review[]
 
   @@map("skins")
 }
@@ -79,8 +82,9 @@ model Chroma {
   name     String
   imageUrl String @map("image_url")
 
-  skin    Skin            @relation(fields: [skinId], references: [id], onDelete: Cascade)
-  ownedBy UserOwnedSkin[]
+  skin           Skin            @relation(fields: [skinId], references: [id], onDelete: Cascade)
+  ownedBy        UserOwnedSkin[]
+  activeLoadouts ActiveLoadout[]
 
   @@unique([skinId, name])
   @@map("chromas")
@@ -99,6 +103,22 @@ model UserOwnedSkin {
 
   @@unique([userId, skinId])
   @@map("user_owned_skins")
+}
+
+model ActiveLoadout {
+  id       String  @id @default(uuid())
+  userId   String  @map("user_id")
+  weaponId String  @map("weapon_id")
+  skinId   String  @map("skin_id")
+  chromaId String? @map("chroma_id")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weapon Weapon  @relation(fields: [weaponId], references: [id])
+  skin   Skin    @relation(fields: [skinId], references: [id])
+  chroma Chroma? @relation(fields: [chromaId], references: [id])
+
+  @@unique([userId, weaponId])
+  @@map("active_loadout")
 }
 
 enum VerificationStatus {
