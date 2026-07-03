@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  displayName String   @map("display_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  ownedSkins    UserOwnedSkin[]
+  reviews       Review[]
+  flagsFiled    ReviewFlag[]    @relation("FlagsFiledByUser")
+
+  @@map("users")
+}
+
+model Weapon {
+  id         String @id @default(uuid())
+  name       String @unique // "Vandal", "Phantom", etc.
+  weaponType String @map("weapon_type") // rifle, sidearm, smg, etc.
+
+  skins Skin[]
+
+  @@map("weapons")
+}
+
+model SkinLine {
+  id   String @id @default(uuid())
+  name String @unique // "Reaver", "Prime", etc.
+
+  skins Skin[]
+
+  @@map("skin_lines")
+}
+
+model ContentTier {
+  id      String @id @default(uuid())
+  name    String @unique // Select, Deluxe, Premium, Ultra, Exclusive
+  vpPrice Int    @map("vp_price") // static lookup, manually maintained
+
+  skins Skin[]
+
+  @@map("content_tiers")
+}
+
+model Skin {
+  id            String @id @default(uuid())
+  name          String
+  weaponId      String @map("weapon_id")
+  skinLineId    String? @map("skin_line_id")
+  contentTierId String @map("content_tier_id")
+  imageUrl      String @map("image_url")
+  riotContentId String @unique @map("riot_content_id") // source ID from valorant-api.com, for re-sync
+
+  weapon      Weapon        @relation(fields: [weaponId], references: [id])
+  skinLine    SkinLine?     @relation(fields: [skinLineId], references: [id])
+  contentTier ContentTier   @relation(fields: [contentTierId], references: [id])
+  chromas     Chroma[]
+  ownedBy     UserOwnedSkin[]
+  reviews     Review[]
+
+  @@map("skins")
+}
+
+model Chroma {
+  id       String @id @default(uuid())
+  skinId   String @map("skin_id")
+  name     String
+  imageUrl String @map("image_url")
+
+  skin    Skin            @relation(fields: [skinId], references: [id], onDelete: Cascade)
+  ownedBy UserOwnedSkin[]
+
+  @@unique([skinId, name])
+  @@map("chromas")
+}
+
+model UserOwnedSkin {
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  skinId   String   @map("skin_id")
+  chromaId String?  @map("chroma_id")
+  addedAt  DateTime @default(now()) @map("added_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skin   Skin    @relation(fields: [skinId], references: [id])
+  chroma Chroma? @relation(fields: [chromaId], references: [id])
+
+  @@unique([userId, skinId])
+  @@map("user_owned_skins")
+}
+
+enum VerificationStatus {
+  self_reported // only tier for v1
+
+  @@map("verification_status")
+}
+
+model Review {
+  id                 String              @id @default(uuid())
+  userId             String              @map("user_id")
+  skinId             String              @map("skin_id")
+  qualityScore       Int                 @map("quality_score") // 1-10
+  valueScore         Int                 @map("value_score") // 1-10
+  wouldRebuy         Boolean             @map("would_rebuy")
+  reviewText         String?             @map("review_text")
+  verificationStatus VerificationStatus  @default(self_reported) @map("verification_status")
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skin  Skin         @relation(fields: [skinId], references: [id])
+  flags ReviewFlag[]
+
+  @@unique([userId, skinId])
+  @@map("reviews")
+}
+
+enum FlagStatus {
+  pending
+  resolved
+
+  @@map("flag_status")
+}
+
+model ReviewFlag {
+  id        String     @id @default(uuid())
+  reviewId  String     @map("review_id")
+  flaggedBy String     @map("flagged_by")
+  reason    String
+  status    FlagStatus @default(pending)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  review        Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  flaggedByUser User   @relation("FlagsFiledByUser", fields: [flaggedBy], references: [id])
+
+  @@map("review_flags")
+}
