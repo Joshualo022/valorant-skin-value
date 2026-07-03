@@ -40,6 +40,12 @@ export default async function RootLayout({
           <nav className="flex items-center gap-4 text-sm">
             {user ? (
               <>
+                <Link href="/collection" className="underline">
+                  My Collection
+                </Link>
+                <Link href="/collection/build" className="underline">
+                  Build Collection
+                </Link>
                 <span className="text-zinc-600">{user.email}</span>
                 <form action={logout}>
                   <button type="submit" className="underline">
