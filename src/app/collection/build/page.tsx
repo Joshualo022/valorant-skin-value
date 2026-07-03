@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { compareWeapons } from "@/lib/weapon-order";
 import { CollectionBuilder } from "./collection-builder";
 
 export default async function CollectionBuildPage() {
@@ -16,11 +17,11 @@ export default async function CollectionBuildPage() {
         name: true,
         imageUrl: true,
         weaponId: true,
-        contentTier: { select: { name: true, vpPrice: true } },
+        contentTier: { select: { name: true, vpPrice: true, iconUrl: true } },
       },
       orderBy: { name: "asc" },
     }),
-    prisma.weapon.findMany({ orderBy: { name: "asc" } }),
+    prisma.weapon.findMany(),
     prisma.userOwnedSkin.findMany({
       where: { userId: user.id },
       select: { skinId: true },
@@ -30,7 +31,7 @@ export default async function CollectionBuildPage() {
   return (
     <CollectionBuilder
       skins={skins}
-      weapons={weapons}
+      weapons={[...weapons].sort(compareWeapons)}
       initialOwnedSkinIds={ownedSkins.map((o) => o.skinId)}
     />
   );

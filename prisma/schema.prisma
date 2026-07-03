@@ -50,6 +50,7 @@ model ContentTier {
   id      String @id @default(uuid())
   name    String @unique // Select, Deluxe, Premium, Ultra, Exclusive
   vpPrice Int    @map("vp_price") // static lookup, manually maintained
+  iconUrl String  @map("icon_url") // tier gem icon, from valorant-api.com
 
   skins Skin[]
 

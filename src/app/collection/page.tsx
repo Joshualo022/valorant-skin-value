@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getOwnedSkinsWithValue } from "@/lib/collection";
+import { WEAPON_TYPE_LABELS, compareWeapons } from "@/lib/weapon-order";
+import { LoadoutView, type OwnedSkin, type WeaponGroup } from "./loadout-view";
 
 export default async function MyCollectionPage() {
   const user = await getCurrentUser();
@@ -10,55 +11,44 @@ export default async function MyCollectionPage() {
     redirect("/login");
   }
 
-  const { ownedSkins, totalValue } = await getOwnedSkinsWithValue(user.id);
+  const [weapons, { ownedSkins, totalValue }, activeLoadouts] = await Promise.all([
+    prisma.weapon.findMany(),
+    getOwnedSkinsWithValue(user.id),
+    prisma.activeLoadout.findMany({ where: { userId: user.id } }),
+  ]);
 
-  return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between gap-4 border-b pb-4">
-        <h1 className="text-xl font-semibold">My Collection</h1>
-        <div className="text-lg font-medium">
-          Total value: <span className="text-amber-400">{totalValue.toLocaleString()} VP</span>
-        </div>
-      </div>
+  const ownedByWeaponId = new Map<string, OwnedSkin[]>();
+  for (const owned of ownedSkins) {
+    const entry: OwnedSkin = {
+      skinId: owned.skin.id,
+      name: owned.skin.name,
+      imageUrl: owned.skin.imageUrl,
+      contentTier: owned.skin.contentTier,
+    };
+    const list = ownedByWeaponId.get(owned.skin.weaponId) ?? [];
+    list.push(entry);
+    ownedByWeaponId.set(owned.skin.weaponId, list);
+  }
 
-      <Link href="/collection/build" className="self-start text-sm text-zinc-300 underline">
-        + Add or remove skins
-      </Link>
+  const activeSkinIdByWeaponId = new Map(activeLoadouts.map((a) => [a.weaponId, a.skinId]));
 
-      {ownedSkins.length === 0 ? (
-        <p className="text-zinc-400">
-          You haven&apos;t added any skins yet.{" "}
-          <Link href="/collection/build" className="underline">
-            Build your collection
-          </Link>
-          .
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {ownedSkins.map((owned) => (
-            <div
-              key={owned.id}
-              className="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3"
-            >
-              <div className="relative h-20 w-full">
-                <Image
-                  src={owned.skin.imageUrl}
-                  alt={owned.skin.name}
-                  fill
-                  className="object-contain"
-                  sizes="200px"
-                />
-              </div>
-              <div className="truncate text-sm font-medium">{owned.skin.name}</div>
-              <div className="text-xs text-zinc-400">{owned.skin.weapon.name}</div>
-              <div className="text-xs text-zinc-400">
-                {owned.skin.contentTier.name} · {owned.skin.contentTier.vpPrice.toLocaleString()}{" "}
-                VP
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  const sortedWeapons = [...weapons].sort(compareWeapons);
+
+  const weaponGroups: WeaponGroup[] = [];
+  for (const weapon of sortedWeapons) {
+    const label = WEAPON_TYPE_LABELS[weapon.weaponType] ?? weapon.weaponType;
+    let group = weaponGroups.find((g) => g.label === label);
+    if (!group) {
+      group = { label, weapons: [] };
+      weaponGroups.push(group);
+    }
+    group.weapons.push({
+      id: weapon.id,
+      name: weapon.name,
+      ownedSkins: ownedByWeaponId.get(weapon.id) ?? [],
+      activeSkinId: activeSkinIdByWeaponId.get(weapon.id) ?? null,
+    });
+  }
+
+  return <LoadoutView weaponGroups={weaponGroups} totalValue={totalValue} />;
 }

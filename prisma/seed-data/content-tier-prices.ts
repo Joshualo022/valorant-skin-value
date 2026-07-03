@@ -6,6 +6,6 @@ export const CONTENT_TIER_VP_PRICES: Record<string, number> = {
   Select: 875,
   Deluxe: 1275,
   Premium: 1775,
-  Ultra: 2175,
-  Exclusive: 2475,
+  Ultra: 2475,
+  Exclusive: 2175,
 };

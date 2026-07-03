@@ -2,19 +2,28 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
 type SkinSummary = {
   id: string;
   name: string;
   imageUrl: string;
   weaponId: string;
-  contentTier: { name: string; vpPrice: number };
+  contentTier: { name: string; vpPrice: number; iconUrl: string };
 };
 
 type Weapon = {
   id: string;
   name: string;
 };
+
+type SortOption = "name" | "price-asc" | "price-desc";
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "name", label: "Name (A–Z)" },
+  { value: "price-asc", label: "Price (low to high)" },
+  { value: "price-desc", label: "Price (high to low)" },
+];
 
 export function CollectionBuilder({
   skins,
@@ -25,10 +34,20 @@ export function CollectionBuilder({
   weapons: Weapon[];
   initialOwnedSkinIds: string[];
 }) {
+  const searchParams = useSearchParams();
+  const requestedWeaponId = searchParams.get("weapon");
+
   const [ownedSkinIds, setOwnedSkinIds] = useState(() => new Set(initialOwnedSkinIds));
-  const [selectedWeaponId, setSelectedWeaponId] = useState(weapons[0]?.id ?? "");
+  const [selectedWeaponId, setSelectedWeaponId] = useState(
+    () =>
+      (requestedWeaponId && weapons.some((w) => w.id === requestedWeaponId)
+        ? requestedWeaponId
+        : weapons[0]?.id) ?? ""
+  );
   const [pendingSkinId, setPendingSkinId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>("name");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const skinsById = useMemo(() => new Map(skins.map((s) => [s.id, s])), [skins]);
 
@@ -43,10 +62,17 @@ export function CollectionBuilder({
     return total;
   }, [ownedSkinIds, skinsById]);
 
-  const visibleSkins = useMemo(
-    () => skins.filter((s) => s.weaponId === selectedWeaponId),
-    [skins, selectedWeaponId]
-  );
+  const visibleSkins = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const filtered = skins.filter(
+      (s) => s.weaponId === selectedWeaponId && (!query || s.name.toLowerCase().includes(query))
+    );
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "price-asc") return a.contentTier.vpPrice - b.contentTier.vpPrice;
+      if (sortBy === "price-desc") return b.contentTier.vpPrice - a.contentTier.vpPrice;
+      return a.name.localeCompare(b.name);
+    });
+  }, [skins, selectedWeaponId, sortBy, searchQuery]);
 
   async function toggleOwnership(skinId: string) {
     const isOwned = ownedSkinIds.has(skinId);
@@ -95,21 +121,50 @@ export function CollectionBuilder({
 
       {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
 
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {weapons.map((weapon) => (
-          <button
-            key={weapon.id}
-            onClick={() => setSelectedWeaponId(weapon.id)}
-            className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm ${
-              weapon.id === selectedWeaponId
-                ? "border-white bg-white text-black"
-                : "border-zinc-700 text-zinc-300"
-            }`}
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search skin names..."
+        className="w-full max-w-sm rounded border border-zinc-700 bg-black px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500"
+      />
+
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {weapons.map((weapon) => (
+            <button
+              key={weapon.id}
+              onClick={() => setSelectedWeaponId(weapon.id)}
+              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm ${
+                weapon.id === selectedWeaponId
+                  ? "border-white bg-white text-black"
+                  : "border-zinc-700 text-zinc-300"
+              }`}
+            >
+              {weapon.name}
+            </button>
+          ))}
+        </div>
+
+        <label className="flex shrink-0 items-center gap-2 text-sm text-zinc-400">
+          Sort by
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="rounded border border-zinc-700 bg-black px-2 py-1 text-zinc-200"
           >
-            {weapon.name}
-          </button>
-        ))}
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
+
+      {visibleSkins.length === 0 && (
+        <p className="text-sm text-zinc-500">No skins match &quot;{searchQuery}&quot;.</p>
+      )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {visibleSkins.map((skin) => {
@@ -133,7 +188,16 @@ export function CollectionBuilder({
                 />
               </div>
               <div className="truncate text-sm font-medium">{skin.name}</div>
-              <div className="text-xs text-zinc-400">
+              <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+                <div className="relative h-3.5 w-3.5 shrink-0">
+                  <Image
+                    src={skin.contentTier.iconUrl}
+                    alt={skin.contentTier.name}
+                    fill
+                    className="object-contain"
+                    sizes="14px"
+                  />
+                </div>
                 {skin.contentTier.name} · {skin.contentTier.vpPrice.toLocaleString()} VP
               </div>
               <div className="text-xs font-semibold">{owned ? "Owned ✓" : "Tap to add"}</div>

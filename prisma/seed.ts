@@ -13,6 +13,7 @@ const VALORANT_API_BASE = "https://valorant-api.com/v1";
 interface ApiContentTier {
   uuid: string;
   devName: string;
+  displayIcon: string;
 }
 
 interface ApiTheme {
@@ -88,8 +89,8 @@ async function main() {
     }
     const row = await prisma.contentTier.upsert({
       where: { name: tier.devName },
-      update: { vpPrice },
-      create: { name: tier.devName, vpPrice },
+      update: { vpPrice, iconUrl: tier.displayIcon },
+      create: { name: tier.devName, vpPrice, iconUrl: tier.displayIcon },
     });
     tierIdByDevName.set(tier.devName, row.id);
   }
