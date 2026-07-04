@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 type SkinSummary = {
@@ -170,38 +171,44 @@ export function CollectionBuilder({
         {visibleSkins.map((skin) => {
           const owned = ownedSkinIds.has(skin.id);
           return (
-            <button
+            <div
               key={skin.id}
-              onClick={() => toggleOwnership(skin.id)}
-              disabled={pendingSkinId === skin.id}
-              className={`flex flex-col gap-2 rounded-lg border p-3 text-left transition disabled:opacity-50 ${
+              className={`flex flex-col gap-2 rounded-lg border p-3 transition ${
                 owned ? "border-amber-400 bg-amber-400/10" : "border-zinc-800"
               }`}
             >
-              <div className="relative h-20 w-full">
-                <Image
-                  src={skin.imageUrl}
-                  alt={skin.name}
-                  fill
-                  className="object-contain"
-                  sizes="200px"
-                />
-              </div>
-              <div className="truncate text-sm font-medium">{skin.name}</div>
-              <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-                <div className="relative h-3.5 w-3.5 shrink-0">
+              <Link href={`/skins/${skin.id}`} className="flex flex-col gap-2">
+                <div className="relative h-20 w-full">
                   <Image
-                    src={skin.contentTier.iconUrl}
-                    alt={skin.contentTier.name}
+                    src={skin.imageUrl}
+                    alt={skin.name}
                     fill
                     className="object-contain"
-                    sizes="14px"
+                    sizes="200px"
                   />
                 </div>
-                {skin.contentTier.name} · {skin.contentTier.vpPrice.toLocaleString()} VP
-              </div>
-              <div className="text-xs font-semibold">{owned ? "Owned ✓" : "Tap to add"}</div>
-            </button>
+                <div className="truncate text-sm font-medium hover:underline">{skin.name}</div>
+                <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+                  <div className="relative h-3.5 w-3.5 shrink-0">
+                    <Image
+                      src={skin.contentTier.iconUrl}
+                      alt={skin.contentTier.name}
+                      fill
+                      className="object-contain"
+                      sizes="14px"
+                    />
+                  </div>
+                  {skin.contentTier.name} · {skin.contentTier.vpPrice.toLocaleString()} VP
+                </div>
+              </Link>
+              <button
+                onClick={() => toggleOwnership(skin.id)}
+                disabled={pendingSkinId === skin.id}
+                className="text-left text-xs font-semibold disabled:opacity-50"
+              >
+                {owned ? "Owned ✓ (tap to remove)" : "Tap to add"}
+              </button>
+            </div>
           );
         })}
       </div>

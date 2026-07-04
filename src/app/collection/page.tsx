@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getOwnedSkinsWithValue } from "@/lib/collection";
 import { WEAPON_TYPE_LABELS, compareWeapons } from "@/lib/weapon-order";
-import { LoadoutView, type OwnedSkin, type WeaponGroup } from "./loadout-view";
+import { LoadoutView, type FullOwnedSkin, type OwnedSkin, type WeaponGroup } from "./loadout-view";
 
 export default async function MyCollectionPage() {
   const user = await getCurrentUser();
@@ -18,6 +18,7 @@ export default async function MyCollectionPage() {
   ]);
 
   const ownedByWeaponId = new Map<string, OwnedSkin[]>();
+  const allOwnedSkins: FullOwnedSkin[] = [];
   for (const owned of ownedSkins) {
     const entry: OwnedSkin = {
       skinId: owned.skin.id,
@@ -28,6 +29,7 @@ export default async function MyCollectionPage() {
     const list = ownedByWeaponId.get(owned.skin.weaponId) ?? [];
     list.push(entry);
     ownedByWeaponId.set(owned.skin.weaponId, list);
+    allOwnedSkins.push({ ...entry, weaponName: owned.skin.weapon.name });
   }
 
   const activeSkinIdByWeaponId = new Map(activeLoadouts.map((a) => [a.weaponId, a.skinId]));
@@ -50,5 +52,11 @@ export default async function MyCollectionPage() {
     });
   }
 
-  return <LoadoutView weaponGroups={weaponGroups} totalValue={totalValue} />;
+  return (
+    <LoadoutView
+      weaponGroups={weaponGroups}
+      totalValue={totalValue}
+      allOwnedSkins={allOwnedSkins}
+    />
+  );
 }
