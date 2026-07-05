@@ -48,6 +48,10 @@ export function CollectionBuilder({
   );
   const [pendingSkinId, setPendingSkinId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Tracks the skin just marked owned so we can prompt "rate it?" right at
+  // the moment of ownership — the highest-leverage nudge per SPEC.md's
+  // incentives section, rather than a generic reminder elsewhere.
+  const [justOwnedSkinId, setJustOwnedSkinId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("name");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -80,6 +84,7 @@ export function CollectionBuilder({
     const isOwned = ownedSkinIds.has(skinId);
     setPendingSkinId(skinId);
     setErrorMessage(null);
+    if (isOwned) setJustOwnedSkinId(null);
 
     setOwnedSkinIds((prev) => {
       const next = new Set(prev);
@@ -98,6 +103,7 @@ export function CollectionBuilder({
           });
 
       if (!res.ok) throw new Error("Request failed");
+      if (!isOwned) setJustOwnedSkinId(skinId);
     } catch {
       // Roll back the optimistic update on failure.
       setOwnedSkinIds((prev) => {
@@ -235,6 +241,14 @@ export function CollectionBuilder({
               >
                 {owned ? "Owned ✓ · tap to remove" : "+ Add to collection"}
               </button>
+              {justOwnedSkinId === skin.id && (
+                <Link
+                  href={`/skins/${skin.id}`}
+                  className="flex items-center justify-between rounded-full bg-accent/15 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/25"
+                >
+                  You own this — rate it? <span aria-hidden="true">→</span>
+                </Link>
+              )}
             </div>
           );
         })}

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getOwnedSkinsWithValue } from "@/lib/collection";
+import { getOwnedSkinsWithValue, getCollectionProgress } from "@/lib/collection";
 import { WEAPON_TYPE_LABELS, compareWeapons } from "@/lib/weapon-order";
 import { LoadoutView, type FullOwnedSkin, type OwnedSkin, type WeaponGroup } from "./loadout-view";
 
@@ -11,11 +11,13 @@ export default async function MyCollectionPage() {
     redirect("/login");
   }
 
-  const [weapons, { ownedSkins, totalValue }, activeLoadouts] = await Promise.all([
-    prisma.weapon.findMany(),
-    getOwnedSkinsWithValue(user.id),
-    prisma.activeLoadout.findMany({ where: { userId: user.id } }),
-  ]);
+  const [weapons, { ownedSkins, totalValue }, activeLoadouts, { reviewedCount }] =
+    await Promise.all([
+      prisma.weapon.findMany(),
+      getOwnedSkinsWithValue(user.id),
+      prisma.activeLoadout.findMany({ where: { userId: user.id } }),
+      getCollectionProgress(user.id),
+    ]);
 
   const ownedByWeaponId = new Map<string, OwnedSkin[]>();
   const allOwnedSkins: FullOwnedSkin[] = [];
@@ -57,6 +59,7 @@ export default async function MyCollectionPage() {
       weaponGroups={weaponGroups}
       totalValue={totalValue}
       allOwnedSkins={allOwnedSkins}
+      reviewedCount={reviewedCount}
     />
   );
 }

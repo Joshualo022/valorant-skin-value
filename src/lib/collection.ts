@@ -19,3 +19,13 @@ export async function getOwnedSkinsWithValue(userId: string) {
 
   return { ownedSkins, totalValue };
 }
+
+// "You've reviewed X of Y owned skins" — reviews require ownership (see
+// POST /api/reviews), so reviewedCount is always <= ownedCount.
+export async function getCollectionProgress(userId: string) {
+  const [ownedCount, reviewedCount] = await Promise.all([
+    prisma.userOwnedSkin.count({ where: { userId } }),
+    prisma.review.count({ where: { userId } }),
+  ]);
+  return { ownedCount, reviewedCount };
+}

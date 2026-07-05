@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSkinWithAggregateScores, getReviewsForSkin } from "@/lib/reviews";
 import { getTierStyle } from "@/lib/tier-style";
+import { isVerifiedReviewer } from "@/lib/incentives";
 import { ReviewSection } from "./review-section";
 
 export default async function SkinDetailPage({
@@ -41,6 +42,13 @@ export default async function SkinDetailPage({
   }
 
   const tier = getTierStyle(skin.contentTier.name);
+
+  // "First to review" is derived here rather than stored: whichever review
+  // has the oldest createdAt among the ones we already fetched for this skin.
+  const earliestReviewId = reviews.reduce<{ id: string; createdAt: Date } | null>(
+    (earliest, r) => (!earliest || r.createdAt < earliest.createdAt ? r : earliest),
+    null
+  )?.id;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
@@ -138,7 +146,19 @@ export default async function SkinDetailPage({
               </div>
               <div className="flex flex-1 flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold">{review.user.displayName}</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-sm font-semibold">{review.user.displayName}</span>
+                    {isVerifiedReviewer(review.user._count.reviews) && (
+                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent">
+                        Verified Reviewer
+                      </span>
+                    )}
+                    {review.id === earliestReviewId && (
+                      <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                        First to review
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xs text-zinc-500">
                     {new Date(review.createdAt).toLocaleDateString()}
                   </span>

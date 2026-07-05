@@ -32,9 +32,14 @@ export async function getSkinWithAggregateScores(skinId: string) {
 }
 
 export async function getReviewsForSkin(skinId: string) {
+  // _count.reviews is the reviewer's total review count across every skin
+  // (not just this one) — used to compute the "Verified Reviewer" badge
+  // without a separate query per reviewer.
   return prisma.review.findMany({
     where: { skinId },
-    include: { user: { select: { displayName: true } } },
+    include: {
+      user: { select: { displayName: true, _count: { select: { reviews: true } } } },
+    },
     orderBy: { createdAt: "desc" },
   });
 }

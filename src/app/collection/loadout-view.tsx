@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
+import { isVerifiedReviewer } from "@/lib/incentives";
 
 export type OwnedSkin = {
   skinId: string;
@@ -30,11 +31,16 @@ export function LoadoutView({
   weaponGroups,
   totalValue,
   allOwnedSkins,
+  reviewedCount,
 }: {
   weaponGroups: WeaponGroup[];
   totalValue: number;
   allOwnedSkins: FullOwnedSkin[];
+  reviewedCount: number;
 }) {
+  const ownedCount = allOwnedSkins.length;
+  const progressPercent = ownedCount > 0 ? Math.round((reviewedCount / ownedCount) * 100) : 0;
+  const verified = isVerifiedReviewer(reviewedCount);
   const [activeSkinIdByWeaponId, setActiveSkinIdByWeaponId] = useState<
     Record<string, string | null>
   >(() =>
@@ -104,6 +110,27 @@ export function LoadoutView({
             {totalValue.toLocaleString()} VP
           </span>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="text-zinc-300">
+            You&apos;ve reviewed <span className="font-semibold text-foreground">{reviewedCount}</span>{" "}
+            of <span className="font-semibold text-foreground">{ownedCount}</span> owned skins
+          </span>
+          {verified && (
+            <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
+              Verified Reviewer
+            </span>
+          )}
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-accent to-accent-strong transition-all"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <span className="text-xs text-zinc-500">{reviewedCount} verified reviews written</span>
       </div>
 
       {errorMessage && (
