@@ -45,17 +45,28 @@ export function HomeSearch() {
 
   return (
     <div className="flex w-full max-w-xl flex-col gap-3">
-      <input
-        type="text"
-        value={query}
-        onChange={handleChange}
-        placeholder="Search for a skin to see its reviews..."
-        className="w-full rounded-full border border-zinc-700 bg-black px-6 py-4 text-lg text-zinc-200 placeholder:text-zinc-500"
-        autoFocus
-      />
+      <div className="relative">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+          className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500"
+        >
+          <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+          <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        <input
+          type="text"
+          value={query}
+          onChange={handleChange}
+          placeholder="Search for a skin to see its reviews..."
+          className="w-full rounded-full border border-border-subtle bg-surface py-4 pl-12 pr-6 text-lg text-foreground placeholder:text-zinc-500 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
+          autoFocus
+        />
+      </div>
 
       {query.trim() && (
-        <div className="flex flex-col rounded-lg border border-zinc-800 bg-black text-left">
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface text-left">
           {loading ? (
             <p className="p-4 text-sm text-zinc-500">Searching...</p>
           ) : results.length === 0 ? (
@@ -65,9 +76,9 @@ export function HomeSearch() {
               <Link
                 key={skin.id}
                 href={`/skins/${skin.id}`}
-                className="flex items-center gap-3 border-b border-zinc-800 p-3 last:border-b-0 hover:bg-zinc-900"
+                className="flex items-center gap-3 border-b border-border-subtle p-3 last:border-b-0 hover:bg-surface-2"
               >
-                <div className="relative h-10 w-16 shrink-0">
+                <div className="relative h-10 w-16 shrink-0 rounded-lg bg-surface-2">
                   <Image
                     src={skin.imageUrl}
                     alt={skin.name}

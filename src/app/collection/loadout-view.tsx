@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { getTierStyle } from "@/lib/tier-style";
 
 export type OwnedSkin = {
   skinId: string;
@@ -84,15 +85,32 @@ export function LoadoutView({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-6">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-black/90 py-3 backdrop-blur">
-        <h1 className="text-xl font-semibold">My Collection</h1>
-        <div className="text-lg font-medium">
-          Total value: <span className="text-amber-400">{totalValue.toLocaleString()} VP</span>
+    <div className="mx-auto flex max-w-4xl flex-col gap-4 p-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong font-display text-lg font-bold text-white">
+            {allOwnedSkins.length}
+          </div>
+          <div className="flex flex-col">
+            <h1 className="font-display text-xl font-bold">My Collection</h1>
+            <span className="text-sm text-zinc-400">
+              {allOwnedSkins.length} skin{allOwnedSkins.length === 1 ? "" : "s"} owned
+            </span>
+          </div>
+        </div>
+        <div className="text-left text-lg font-medium sm:text-right">
+          <div className="text-xs uppercase tracking-wide text-zinc-500">Total value</div>
+          <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
+            {totalValue.toLocaleString()} VP
+          </span>
         </div>
       </div>
 
-      {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+      {errorMessage && (
+        <p role="alert" className="text-sm text-red-500">
+          {errorMessage}
+        </p>
+      )}
 
       <div className="flex flex-col">
         {weaponGroups.map((group) => (
@@ -106,19 +124,25 @@ export function LoadoutView({
               const activeSkin = weapon.ownedSkins.find((s) => s.skinId === activeSkinId);
               const isExpanded = expandedWeaponId === weapon.id;
 
+              const activeTier = activeSkin ? getTierStyle(activeSkin.contentTier.name) : null;
+
               return (
-                <div key={weapon.id} className="border-b border-zinc-800">
+                <div key={weapon.id} className="border-b border-border-subtle">
                   <button
                     onClick={() => setExpandedWeaponId(isExpanded ? null : weapon.id)}
-                    className="flex w-full items-center gap-4 py-3 text-left"
+                    className="flex w-full cursor-pointer items-center gap-4 rounded-xl py-3 text-left transition-colors hover:bg-surface"
                   >
-                    <div className="relative h-14 w-24 shrink-0 bg-zinc-900/50">
+                    <div
+                      className={`relative h-14 w-24 shrink-0 rounded-lg bg-surface-2 ${
+                        activeTier ? activeTier.ringGlow : ""
+                      }`}
+                    >
                       {activeSkin ? (
                         <Image
                           src={activeSkin.imageUrl}
                           alt={activeSkin.name}
                           fill
-                          className="object-contain"
+                          className="object-contain p-1"
                           sizes="150px"
                         />
                       ) : (
@@ -146,7 +170,7 @@ export function LoadoutView({
                           You haven&apos;t added any skins for the {weapon.name} yet.{" "}
                           <Link
                             href={`/collection/build?weapon=${weapon.id}`}
-                            className="underline"
+                            className="text-accent underline"
                           >
                             Add some
                           </Link>
@@ -154,46 +178,50 @@ export function LoadoutView({
                         </p>
                       ) : (
                         <>
-                          {weapon.ownedSkins.map((skin) => (
-                            <button
-                              key={skin.skinId}
-                              onClick={() => selectSkin(weapon.id, skin.skinId)}
-                              disabled={pendingWeaponId === weapon.id}
-                              className={`flex w-24 flex-col items-center gap-1 rounded border p-2 text-center disabled:opacity-50 ${
-                                skin.skinId === activeSkinId
-                                  ? "border-amber-400 bg-amber-400/10"
-                                  : "border-zinc-800"
-                              }`}
-                            >
-                              <div className="relative h-12 w-full">
-                                <Image
-                                  src={skin.imageUrl}
-                                  alt={skin.name}
-                                  fill
-                                  className="object-contain"
-                                  sizes="100px"
-                                />
-                              </div>
-                              <div className="w-full truncate text-xs">{skin.name}</div>
-                              <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-                                <div className="relative h-3 w-3 shrink-0">
+                          {weapon.ownedSkins.map((skin) => {
+                            const pickTier = getTierStyle(skin.contentTier.name);
+                            const isActive = skin.skinId === activeSkinId;
+                            return (
+                              <button
+                                key={skin.skinId}
+                                onClick={() => selectSkin(weapon.id, skin.skinId)}
+                                disabled={pendingWeaponId === weapon.id}
+                                className={`flex w-24 cursor-pointer flex-col items-center gap-1 rounded-xl border bg-surface p-2 text-center transition-all disabled:opacity-50 ${
+                                  isActive
+                                    ? `border-transparent ${pickTier.ringGlow}`
+                                    : "border-border-subtle hover:border-zinc-600"
+                                }`}
+                              >
+                                <div className="relative h-12 w-full">
                                   <Image
-                                    src={skin.contentTier.iconUrl}
-                                    alt={skin.contentTier.name}
+                                    src={skin.imageUrl}
+                                    alt={skin.name}
                                     fill
                                     className="object-contain"
-                                    sizes="12px"
+                                    sizes="100px"
                                   />
                                 </div>
-                                {skin.contentTier.vpPrice.toLocaleString()} VP
-                              </div>
-                            </button>
-                          ))}
+                                <div className="w-full truncate text-xs">{skin.name}</div>
+                                <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                                  <div className="relative h-3 w-3 shrink-0">
+                                    <Image
+                                      src={skin.contentTier.iconUrl}
+                                      alt={skin.contentTier.name}
+                                      fill
+                                      className="object-contain"
+                                      sizes="12px"
+                                    />
+                                  </div>
+                                  {skin.contentTier.vpPrice.toLocaleString()} VP
+                                </div>
+                              </button>
+                            );
+                          })}
                           {activeSkinId && (
                             <button
                               onClick={() => clearSkin(weapon.id)}
                               disabled={pendingWeaponId === weapon.id}
-                              className="w-24 rounded border border-zinc-800 p-2 text-xs text-zinc-400 disabled:opacity-50"
+                              className="flex min-h-[92px] w-24 cursor-pointer items-center justify-center rounded-xl border border-border-subtle p-2 text-xs font-medium text-zinc-400 transition-colors hover:border-red-500/40 hover:text-red-400 disabled:opacity-50"
                             >
                               Remove
                             </button>
@@ -209,51 +237,54 @@ export function LoadoutView({
         ))}
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-zinc-800 pt-6">
+      <div className="flex flex-col gap-2 border-t border-border-subtle pt-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
           All Owned Skins ({allOwnedSkins.length})
         </h2>
         {allOwnedSkins.length === 0 ? (
           <p className="text-sm text-zinc-500">
             You haven&apos;t added any skins yet.{" "}
-            <Link href="/collection/build" className="underline">
+            <Link href="/collection/build" className="text-accent underline">
               Build your collection
             </Link>
             .
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {allOwnedSkins.map((skin) => (
-              <Link
-                key={skin.skinId}
-                href={`/skins/${skin.skinId}`}
-                className="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 hover:border-zinc-600"
-              >
-                <div className="relative h-20 w-full">
-                  <Image
-                    src={skin.imageUrl}
-                    alt={skin.name}
-                    fill
-                    className="object-contain"
-                    sizes="200px"
-                  />
-                </div>
-                <div className="truncate text-sm font-medium">{skin.name}</div>
-                <div className="text-xs text-zinc-400">{skin.weaponName}</div>
-                <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-                  <div className="relative h-3.5 w-3.5 shrink-0">
+            {allOwnedSkins.map((skin) => {
+              const tier = getTierStyle(skin.contentTier.name);
+              return (
+                <Link
+                  key={skin.skinId}
+                  href={`/skins/${skin.skinId}`}
+                  className={`group flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface p-3 transition-all hover:border-transparent ${tier.hoverRingGlow}`}
+                >
+                  <div className="relative h-20 w-full rounded-lg bg-surface-2">
                     <Image
-                      src={skin.contentTier.iconUrl}
-                      alt={skin.contentTier.name}
+                      src={skin.imageUrl}
+                      alt={skin.name}
                       fill
-                      className="object-contain"
-                      sizes="14px"
+                      className="object-contain transition-transform group-hover:scale-105"
+                      sizes="200px"
                     />
                   </div>
-                  {skin.contentTier.vpPrice.toLocaleString()} VP
-                </div>
-              </Link>
-            ))}
+                  <div className="truncate text-sm font-medium">{skin.name}</div>
+                  <div className="text-xs text-zinc-400">{skin.weaponName}</div>
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+                    <div className="relative h-3.5 w-3.5 shrink-0">
+                      <Image
+                        src={skin.contentTier.iconUrl}
+                        alt={skin.contentTier.name}
+                        fill
+                        className="object-contain"
+                        sizes="14px"
+                      />
+                    </div>
+                    <span className={tier.text}>{skin.contentTier.vpPrice.toLocaleString()} VP</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

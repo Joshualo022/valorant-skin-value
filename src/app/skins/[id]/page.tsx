@@ -3,6 +3,7 @@ import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSkinWithAggregateScores, getReviewsForSkin } from "@/lib/reviews";
+import { getTierStyle } from "@/lib/tier-style";
 import { ReviewSection } from "./review-section";
 
 export default async function SkinDetailPage({
@@ -39,25 +40,31 @@ export default async function SkinDetailPage({
     existingReview = review;
   }
 
+  const tier = getTierStyle(skin.contentTier.name);
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
-      <div className="flex flex-col gap-6 sm:flex-row">
-        <div className="relative h-40 w-full shrink-0 bg-zinc-900/50 sm:w-64">
-          <Image
-            src={skin.imageUrl}
-            alt={skin.name}
-            fill
-            className="object-contain"
-            sizes="256px"
-          />
+      <div className="flex flex-col gap-6 rounded-2xl border border-border-subtle bg-surface p-6 sm:flex-row">
+        <div
+          className={`relative h-40 w-full shrink-0 rounded-xl bg-gradient-to-br ${tier.gradient} bg-surface-2 p-1 sm:w-64`}
+        >
+          <div className="relative h-full w-full rounded-lg bg-surface-2">
+            <Image
+              src={skin.imageUrl}
+              alt={skin.name}
+              fill
+              className="object-contain p-3"
+              sizes="256px"
+            />
+          </div>
         </div>
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">{skin.name}</h1>
+          <h1 className="font-display text-2xl font-bold">{skin.name}</h1>
           <div className="text-sm text-zinc-400">
             {skin.weapon.name}
             {skin.skinLine ? ` · ${skin.skinLine.name}` : ""}
           </div>
-          <div className="flex items-center gap-1.5 text-sm text-zinc-400">
+          <div className="flex items-center gap-1.5 text-sm">
             <div className="relative h-4 w-4 shrink-0">
               <Image
                 src={skin.contentTier.iconUrl}
@@ -67,26 +74,29 @@ export default async function SkinDetailPage({
                 sizes="16px"
               />
             </div>
-            {skin.contentTier.name} · {skin.contentTier.vpPrice.toLocaleString()} VP
+            <span className={`font-semibold ${tier.text}`}>{skin.contentTier.name}</span>
+            <span className="text-zinc-400">
+              · {skin.contentTier.vpPrice.toLocaleString()} VP
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 rounded-lg border border-zinc-800 p-4 text-center">
+      <div className="grid grid-cols-3 gap-4 rounded-2xl border border-border-subtle bg-surface p-4 text-center">
         <div>
-          <div className="text-2xl font-semibold">
+          <div className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
             {avgQualityScore ? avgQualityScore.toFixed(1) : "—"}
           </div>
           <div className="text-xs text-zinc-400">Avg Quality</div>
         </div>
         <div>
-          <div className="text-2xl font-semibold">
+          <div className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
             {avgValueScore ? avgValueScore.toFixed(1) : "—"}
           </div>
           <div className="text-xs text-zinc-400">Avg Value</div>
         </div>
         <div>
-          <div className="text-2xl font-semibold">
+          <div className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
             {wouldRebuyPercent !== null ? `${wouldRebuyPercent}%` : "—"}
           </div>
           <div className="text-xs text-zinc-400">Would Rebuy</div>
@@ -113,24 +123,47 @@ export default async function SkinDetailPage({
         }
       />
 
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Reviews</h2>
+      <div className="flex flex-col gap-3">
+        <h2 className="font-display text-lg font-bold">Reviews</h2>
         {reviews.length === 0 ? (
           <p className="text-sm text-zinc-500">No reviews yet.</p>
         ) : (
           reviews.map((review) => (
-            <div key={review.id} className="flex flex-col gap-1 border-b border-zinc-800 pb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{review.user.displayName}</span>
-                <span className="text-xs text-zinc-500">
-                  {new Date(review.createdAt).toLocaleDateString()}
-                </span>
+            <div
+              key={review.id}
+              className="flex gap-3 rounded-2xl border border-border-subtle bg-surface p-4"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-sm font-bold text-white">
+                {review.user.displayName[0]?.toUpperCase() ?? "?"}
               </div>
-              <div className="text-xs text-zinc-400">
-                Quality {review.qualityScore}/10 · Value {review.valueScore}/10 ·{" "}
-                {review.wouldRebuy ? "Would rebuy" : "Would not rebuy"}
+              <div className="flex flex-1 flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">{review.user.displayName}</span>
+                  <span className="text-xs text-zinc-500">
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-zinc-300">
+                    Quality {review.qualityScore}/10
+                  </span>
+                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-zinc-300">
+                    Value {review.valueScore}/10
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 ${
+                      review.wouldRebuy
+                        ? "bg-accent/15 text-accent"
+                        : "bg-surface-2 text-zinc-400"
+                    }`}
+                  >
+                    {review.wouldRebuy ? "Would rebuy" : "Would not rebuy"}
+                  </span>
+                </div>
+                {review.reviewText && (
+                  <p className="text-sm text-zinc-300">{review.reviewText}</p>
+                )}
               </div>
-              {review.reviewText && <p className="text-sm text-zinc-300">{review.reviewText}</p>}
             </div>
           ))
         )}

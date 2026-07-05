@@ -26,6 +26,7 @@ export function ReviewSection({
   existingReview: ExistingReview | null;
 }) {
   const router = useRouter();
+  const [justAdded, setJustAdded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [qualityScore, setQualityScore] = useState(existingReview?.qualityScore ?? 7);
   const [valueScore, setValueScore] = useState(existingReview?.valueScore ?? 7);
@@ -34,10 +35,12 @@ export function ReviewSection({
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const effectivelyOwnsSkin = ownsSkin || justAdded;
+
   if (!isLoggedIn) {
     return (
       <p className="text-sm text-zinc-500">
-        <Link href="/login" className="underline">
+        <Link href="/login" className="text-accent underline">
           Log in
         </Link>{" "}
         to review skins you own.
@@ -45,15 +48,46 @@ export function ReviewSection({
     );
   }
 
-  if (!ownsSkin) {
+  async function handleAddAndReview() {
+    setPending(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch("/api/me/collection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skinId }),
+      });
+      if (!res.ok) throw new Error("Something went wrong");
+
+      // Add ownership and jump straight into the review form in one click,
+      // rather than sending the user to the builder and back.
+      setJustAdded(true);
+      setIsEditing(true);
+      router.refresh();
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (!effectivelyOwnsSkin) {
     return (
-      <p className="text-sm text-zinc-500">
-        You don&apos;t own this skin yet.{" "}
-        <Link href="/collection/build" className="underline">
-          Add it to your collection
-        </Link>{" "}
-        to review it.
-      </p>
+      <div className="flex flex-col items-start gap-2">
+        <button
+          onClick={handleAddAndReview}
+          disabled={pending}
+          className="cursor-pointer rounded-full bg-gradient-to-r from-accent to-accent-strong px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_-6px_rgba(255,47,146,0.8)] transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+        >
+          {pending ? "Adding..." : "Add to collection & review"}
+        </button>
+        {errorMessage && (
+          <p role="alert" className="text-sm text-red-500">
+            {errorMessage}
+          </p>
+        )}
+      </div>
     );
   }
 
@@ -110,7 +144,7 @@ export function ReviewSection({
     return (
       <button
         onClick={() => setIsEditing(true)}
-        className="self-start rounded border border-zinc-700 px-4 py-2 text-sm"
+        className="cursor-pointer self-start rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-medium transition-colors hover:border-accent/50"
       >
         {existingReview ? "Edit your review" : "Write a review"}
       </button>
@@ -118,14 +152,17 @@ export function ReviewSection({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-lg border border-zinc-800 p-4">
-      <div className="flex gap-6">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-4"
+    >
+      <div className="flex flex-wrap gap-6">
         <label className="flex flex-col gap-1 text-sm">
           Quality
           <select
             value={qualityScore}
             onChange={(e) => setQualityScore(Number(e.target.value))}
-            className="rounded border border-zinc-700 bg-black px-2 py-1"
+            className="cursor-pointer rounded-full border border-border-subtle bg-surface-2 px-3 py-1.5 focus:border-accent focus:outline-none"
           >
             {SCORE_OPTIONS.map((n) => (
               <option key={n} value={n}>
@@ -139,7 +176,7 @@ export function ReviewSection({
           <select
             value={valueScore}
             onChange={(e) => setValueScore(Number(e.target.value))}
-            className="rounded border border-zinc-700 bg-black px-2 py-1"
+            className="cursor-pointer rounded-full border border-border-subtle bg-surface-2 px-3 py-1.5 focus:border-accent focus:outline-none"
           >
             {SCORE_OPTIONS.map((n) => (
               <option key={n} value={n}>
@@ -153,6 +190,7 @@ export function ReviewSection({
             type="checkbox"
             checked={wouldRebuy}
             onChange={(e) => setWouldRebuy(e.target.checked)}
+            className="h-4 w-4 accent-accent"
           />
           Would rebuy
         </label>
@@ -164,17 +202,21 @@ export function ReviewSection({
           value={reviewText}
           onChange={(e) => setReviewText(e.target.value)}
           rows={3}
-          className="rounded border border-zinc-700 bg-black px-3 py-2"
+          className="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 focus:border-accent focus:outline-none"
         />
       </label>
 
-      {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+      {errorMessage && (
+        <p role="alert" className="text-sm text-red-500">
+          {errorMessage}
+        </p>
+      )}
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-white px-4 py-2 text-sm text-black disabled:opacity-50"
+          className="cursor-pointer rounded-full bg-gradient-to-r from-accent to-accent-strong px-5 py-2 text-sm font-semibold text-white shadow-[0_0_20px_-6px_rgba(255,47,146,0.8)] transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
         >
           {pending ? "Saving..." : "Save review"}
         </button>
@@ -182,7 +224,7 @@ export function ReviewSection({
           type="button"
           onClick={() => setIsEditing(false)}
           disabled={pending}
-          className="text-sm text-zinc-400"
+          className="cursor-pointer text-sm text-zinc-400 hover:text-foreground"
         >
           Cancel
         </button>
@@ -191,7 +233,7 @@ export function ReviewSection({
             type="button"
             onClick={handleDelete}
             disabled={pending}
-            className="ml-auto text-sm text-red-500"
+            className="ml-auto cursor-pointer text-sm text-red-500 hover:text-red-400"
           >
             Delete review
           </button>

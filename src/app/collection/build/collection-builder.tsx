@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getTierStyle } from "@/lib/tier-style";
 
 type SkinSummary = {
   id: string;
@@ -112,23 +113,41 @@ export function CollectionBuilder({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-6">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-black/90 py-3 backdrop-blur">
-        <h1 className="text-xl font-semibold">Build your collection</h1>
+    <div className="mx-auto flex max-w-6xl flex-col gap-4 p-6">
+      <div className="sticky top-14 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle/80 bg-background/90 py-3 backdrop-blur-md">
+        <h1 className="font-display text-xl font-bold">Build your collection</h1>
         <div className="text-lg font-medium">
-          Total value: <span className="text-amber-400">{totalValue.toLocaleString()} VP</span>
+          Total value:{" "}
+          <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-transparent">
+            {totalValue.toLocaleString()} VP
+          </span>
         </div>
       </div>
 
-      {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+      {errorMessage && (
+        <p role="alert" className="text-sm text-red-500">
+          {errorMessage}
+        </p>
+      )}
 
-      <input
-        type="text"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search skin names..."
-        className="w-full max-w-sm rounded border border-zinc-700 bg-black px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500"
-      />
+      <div className="relative w-full max-w-sm">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+        >
+          <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+          <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search skin names..."
+          className="w-full rounded-full border border-border-subtle bg-surface py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-zinc-500 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
+        />
+      </div>
 
       <div className="flex items-center justify-between gap-4">
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -136,10 +155,10 @@ export function CollectionBuilder({
             <button
               key={weapon.id}
               onClick={() => setSelectedWeaponId(weapon.id)}
-              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm ${
+              className={`cursor-pointer whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 weapon.id === selectedWeaponId
-                  ? "border-white bg-white text-black"
-                  : "border-zinc-700 text-zinc-300"
+                  ? "border-transparent bg-gradient-to-r from-accent to-accent-strong text-white"
+                  : "border-border-subtle text-zinc-300 hover:bg-surface"
               }`}
             >
               {weapon.name}
@@ -152,7 +171,7 @@ export function CollectionBuilder({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="rounded border border-zinc-700 bg-black px-2 py-1 text-zinc-200"
+            className="cursor-pointer rounded-full border border-border-subtle bg-surface px-3 py-1.5 text-foreground focus:border-accent focus:outline-none"
           >
             {SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -170,20 +189,23 @@ export function CollectionBuilder({
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {visibleSkins.map((skin) => {
           const owned = ownedSkinIds.has(skin.id);
+          const tier = getTierStyle(skin.contentTier.name);
           return (
             <div
               key={skin.id}
-              className={`flex flex-col gap-2 rounded-lg border p-3 transition ${
-                owned ? "border-amber-400 bg-amber-400/10" : "border-zinc-800"
+              className={`group flex flex-col gap-2 rounded-2xl border bg-surface p-3 transition-all ${
+                owned
+                  ? `border-transparent ${tier.ringGlow}`
+                  : "border-border-subtle hover:border-zinc-600"
               }`}
             >
               <Link href={`/skins/${skin.id}`} className="flex flex-col gap-2">
-                <div className="relative h-20 w-full">
+                <div className="relative h-20 w-full rounded-lg bg-surface-2">
                   <Image
                     src={skin.imageUrl}
                     alt={skin.name}
                     fill
-                    className="object-contain"
+                    className="object-contain transition-transform group-hover:scale-105"
                     sizes="200px"
                   />
                 </div>
@@ -198,15 +220,20 @@ export function CollectionBuilder({
                       sizes="14px"
                     />
                   </div>
-                  {skin.contentTier.name} · {skin.contentTier.vpPrice.toLocaleString()} VP
+                  <span className={tier.text}>{skin.contentTier.name}</span> ·{" "}
+                  {skin.contentTier.vpPrice.toLocaleString()} VP
                 </div>
               </Link>
               <button
                 onClick={() => toggleOwnership(skin.id)}
                 disabled={pendingSkinId === skin.id}
-                className="text-left text-xs font-semibold disabled:opacity-50"
+                className={`cursor-pointer rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
+                  owned
+                    ? "bg-surface-2 text-zinc-300 hover:bg-red-500/10 hover:text-red-400"
+                    : "bg-gradient-to-r from-accent to-accent-strong text-white"
+                }`}
               >
-                {owned ? "Owned ✓ (tap to remove)" : "Tap to add"}
+                {owned ? "Owned ✓ · tap to remove" : "+ Add to collection"}
               </button>
             </div>
           );

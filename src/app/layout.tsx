@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Chakra_Petch } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { getCurrentUser } from "@/lib/auth";
@@ -13,6 +13,14 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Angular, esports-styled display face used for the wordmark and headings —
+// kept separate from the body font so paragraphs stay easy to read.
+const chakraPetch = Chakra_Petch({
+  variable: "--font-chakra-petch",
+  subsets: ["latin"],
+  weight: ["600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -30,42 +38,84 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${chakraPetch.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <header className="flex items-center justify-between px-6 py-4 border-b">
-          <Link href="/" className="font-semibold">
-            Valorant Skin Value
-          </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            {user ? (
-              <>
-                <Link href="/collection" className="underline">
-                  My Collection
-                </Link>
-                <Link href="/collection/build" className="underline">
-                  Build Collection
-                </Link>
-                <span className="text-zinc-600">{user.email}</span>
-                <form action={logout}>
-                  <button type="submit" className="underline">
-                    Log out
-                  </button>
-                </form>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="underline">
-                  Log in
-                </Link>
-                <Link href="/signup" className="underline">
-                  Sign up
-                </Link>
-              </>
-            )}
-          </nav>
+      <body className="min-h-full flex flex-col bg-background">
+        <header className="sticky top-0 z-20 border-b border-border-subtle/80 bg-background/85 backdrop-blur-md">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+            <Link href="/" className="flex items-center gap-2">
+              <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" aria-hidden="true">
+                <path
+                  d="M12 1.5 22.5 12 12 22.5 1.5 12Z"
+                  fill="url(#logo-gradient)"
+                />
+                <defs>
+                  <linearGradient id="logo-gradient" x1="0" y1="0" x2="24" y2="24">
+                    <stop offset="0" stopColor="#ff4d8f" />
+                    <stop offset="1" stopColor="#ff2f92" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <span className="font-display text-lg font-bold tracking-tight text-foreground">
+                Valorant Skin Value
+              </span>
+            </Link>
+            <nav className="flex items-center gap-2 text-sm">
+              {user ? (
+                <>
+                  <Link
+                    href="/collection"
+                    className="rounded-full px-3 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground"
+                  >
+                    My Collection
+                  </Link>
+                  <Link
+                    href="/collection/build"
+                    className="rounded-full px-3 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground"
+                  >
+                    Build Collection
+                  </Link>
+                  <span
+                    title={user.email}
+                    className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white"
+                  >
+                    {user.email?.[0]?.toUpperCase() ?? "?"}
+                  </span>
+                  <form action={logout}>
+                    <button
+                      type="submit"
+                      className="cursor-pointer rounded-full px-3 py-1.5 font-medium text-zinc-400 transition-colors hover:bg-surface hover:text-foreground"
+                    >
+                      Log out
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="rounded-full px-3 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="rounded-full bg-gradient-to-r from-accent to-accent-strong px-4 py-1.5 font-semibold text-white shadow-[0_0_20px_-6px_rgba(255,47,146,0.8)] transition-transform hover:scale-105"
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
+            </nav>
+          </div>
         </header>
         {children}
+        <footer className="border-t border-border-subtle/80 px-6 py-4 text-center text-xs text-zinc-400">
+          Valorant Skin Value isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the
+          views or opinions of Riot Games or anyone officially involved in producing or
+          managing VALORANT. VALORANT and Riot Games are trademarks or registered
+          trademarks of Riot Games, Inc.
+        </footer>
       </body>
     </html>
   );
