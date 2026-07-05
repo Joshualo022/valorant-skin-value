@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { validateReviewInput } from "@/lib/reviews";
+import { validateReviewInput, setReviewTags } from "@/lib/reviews";
+import type { ReviewTagValue } from "@/lib/review-tags";
 
 export async function PATCH(
   request: Request,
@@ -36,6 +37,10 @@ export async function PATCH(
       reviewText: body.reviewText || null,
     },
   });
+
+  if (body.tags !== undefined) {
+    await setReviewTags(id, body.tags as ReviewTagValue[]);
+  }
 
   return NextResponse.json({ review });
 }

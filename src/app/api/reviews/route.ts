@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { validateReviewInput } from "@/lib/reviews";
+import { validateReviewInput, setReviewTags } from "@/lib/reviews";
+import type { ReviewTagValue } from "@/lib/review-tags";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -49,6 +50,11 @@ export async function POST(request: Request) {
       reviewText: body.reviewText || null,
     },
   });
+
+  const tags = (body.tags ?? []) as ReviewTagValue[];
+  if (tags.length > 0) {
+    await setReviewTags(review.id, tags);
+  }
 
   return NextResponse.json({ review }, { status: 201 });
 }

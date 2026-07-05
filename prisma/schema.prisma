@@ -142,9 +142,36 @@ model Review {
   user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   skin  Skin         @relation(fields: [skinId], references: [id])
   flags ReviewFlag[]
+  tags  ReviewTag[]
 
   @@unique([userId, skinId])
   @@map("reviews")
+}
+
+enum ReviewTagType {
+  great_design
+  clunky_design
+  great_sound
+  weak_sound
+  great_vfx
+  weak_vfx
+  great_feel
+  clunky_feel
+  underrated
+  overrated
+
+  @@map("review_tag_type")
+}
+
+model ReviewTag {
+  id       String        @id @default(uuid())
+  reviewId String        @map("review_id")
+  tag      ReviewTagType
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, tag])
+  @@map("review_tags")
 }
 
 enum FlagStatus {

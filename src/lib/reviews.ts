@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { REVIEW_TAG_VALUES, type ReviewTagValue } from "@/lib/review-tags";
 
 // The core aggregation for a skin's public-facing scores: average quality
 // and value scores across all reviews, plus the share of reviewers who'd
@@ -39,8 +40,25 @@ export async function getReviewsForSkin(skinId: string) {
     where: { skinId },
     include: {
       user: { select: { displayName: true, _count: { select: { reviews: true } } } },
+      tags: true,
     },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+// Powers the home page's "recently reviewed" carousel. `distinct: ["skinId"]`
+// combined with `orderBy: createdAt desc` keeps, for each skin, only the
+// newest review — so a skin reviewed twice doesn't crowd out others, and the
+// list naturally reflects real recent activity rather than a stored feed.
+export async function getRecentlyReviewedSkins(limit: number) {
+  return prisma.review.findMany({
+    distinct: ["skinId"],
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: {
+      skin: { include: { weapon: true, contentTier: true } },
+      user: { select: { displayName: true } },
+    },
   });
 }
 
@@ -49,8 +67,9 @@ export function validateReviewInput(body: {
   valueScore?: unknown;
   wouldRebuy?: unknown;
   reviewText?: unknown;
+  tags?: unknown;
 }): string | null {
-  const { qualityScore, valueScore, wouldRebuy } = body;
+  const { qualityScore, valueScore, wouldRebuy, tags } = body;
 
   if (!Number.isInteger(qualityScore) || (qualityScore as number) < 1 || (qualityScore as number) > 10) {
     return "qualityScore must be an integer from 1 to 10";
@@ -64,5 +83,24 @@ export function validateReviewInput(body: {
   if (body.reviewText !== undefined && body.reviewText !== null && typeof body.reviewText !== "string") {
     return "reviewText must be a string";
   }
+  if (tags !== undefined) {
+    if (!Array.isArray(tags) || !tags.every((t) => REVIEW_TAG_VALUES.includes(t))) {
+      return "tags must be an array of valid tag values";
+    }
+    if (new Set(tags).size !== tags.length) {
+      return "tags must not contain duplicates";
+    }
+  }
   return null;
+}
+
+// Replaces a review's tag rows to match the given set — simpler than diffing,
+// and tag lists are short (at most one per dimension, five dimensions).
+export async function setReviewTags(reviewId: string, tags: ReviewTagValue[]) {
+  await prisma.$transaction([
+    prisma.reviewTag.deleteMany({ where: { reviewId } }),
+    prisma.reviewTag.createMany({
+      data: tags.map((tag) => ({ reviewId, tag })),
+    }),
+  ]);
 }

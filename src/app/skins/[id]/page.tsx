@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSkinWithAggregateScores, getReviewsForSkin } from "@/lib/reviews";
 import { getTierStyle } from "@/lib/tier-style";
 import { isVerifiedReviewer } from "@/lib/incentives";
+import { REVIEW_TAG_LABELS, type ReviewTagValue } from "@/lib/review-tags";
 import { ReviewSection } from "./review-section";
 
 export default async function SkinDetailPage({
@@ -35,6 +36,7 @@ export default async function SkinDetailPage({
       }),
       prisma.review.findUnique({
         where: { userId_skinId: { userId: user.id, skinId: id } },
+        include: { tags: true },
       }),
     ]);
     ownsSkin = !!owned;
@@ -126,6 +128,7 @@ export default async function SkinDetailPage({
                 valueScore: existingReview.valueScore,
                 wouldRebuy: existingReview.wouldRebuy,
                 reviewText: existingReview.reviewText,
+                tags: existingReview.tags.map((t) => t.tag),
               }
             : null
         }
@@ -179,6 +182,14 @@ export default async function SkinDetailPage({
                   >
                     {review.wouldRebuy ? "Would rebuy" : "Would not rebuy"}
                   </span>
+                  {review.tags.map((t) => (
+                    <span
+                      key={t.id}
+                      className="rounded-full bg-surface-2 px-2 py-0.5 capitalize text-zinc-400"
+                    >
+                      {REVIEW_TAG_LABELS[t.tag as ReviewTagValue]}
+                    </span>
+                  ))}
                 </div>
                 {review.reviewText && (
                   <p className="text-sm text-zinc-300">{review.reviewText}</p>
