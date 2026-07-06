@@ -51,13 +51,26 @@ export default async function RootLayout({
                     <stop offset="1" stopColor="#ff2f92" />
                   </linearGradient>
                 </defs>
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="8.6"
+                <path
+                  d="M 12 3.375 A 8.625 8.625 0 0 1 19.95 9.375"
                   fill="none"
                   stroke="url(#logo-gradient)"
                   strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M 19.95 14.625 A 8.625 8.625 0 0 1 12 20.625"
+                  fill="none"
+                  stroke="url(#logo-gradient)"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M 4.05 14.625 A 8.625 8.625 0 0 1 4.05 9.375"
+                  fill="none"
+                  stroke="url(#logo-gradient)"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
                 />
                 <path d="M12 7.5 15.75 12 12 16.5 8.25 12Z" fill="url(#logo-gradient)" />
               </svg>
