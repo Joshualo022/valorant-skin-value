@@ -37,7 +37,7 @@ export default async function Home() {
         </div>
 
         <Link
-          href={user ? "/collection/build" : "/signup"}
+          href={user ? "/catalog" : "/signup"}
           className="group relative mt-4 flex w-full max-w-sm items-center gap-4 rounded-2xl border border-border-subtle bg-surface px-5 py-4 text-left transition-colors hover:border-accent/50"
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong">
@@ -51,9 +51,9 @@ export default async function Home() {
             </svg>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="font-display font-semibold text-foreground">My skins</span>
+            <span className="font-display font-semibold text-foreground">Skin Catalog</span>
             <span className="text-sm text-zinc-400">
-              Build your collection and see its total value in VP.
+              Browse every skin — add what you own, wishlist what you want.
             </span>
           </div>
         </Link>

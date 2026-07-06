@@ -27,26 +27,32 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: "price-desc", label: "Price (high to low)" },
 ];
 
-export function CollectionBuilder({
+export function SkinCatalog({
   skins,
   weapons,
   initialOwnedSkinIds,
+  initialWishlistedSkinIds,
 }: {
   skins: SkinSummary[];
   weapons: Weapon[];
   initialOwnedSkinIds: string[];
+  initialWishlistedSkinIds: string[];
 }) {
   const searchParams = useSearchParams();
   const requestedWeaponId = searchParams.get("weapon");
 
   const [ownedSkinIds, setOwnedSkinIds] = useState(() => new Set(initialOwnedSkinIds));
+  const [wishlistedSkinIds, setWishlistedSkinIds] = useState(
+    () => new Set(initialWishlistedSkinIds)
+  );
   const [selectedWeaponId, setSelectedWeaponId] = useState(
     () =>
       (requestedWeaponId && weapons.some((w) => w.id === requestedWeaponId)
         ? requestedWeaponId
         : weapons[0]?.id) ?? ""
   );
-  const [pendingSkinId, setPendingSkinId] = useState<string | null>(null);
+  const [pendingOwnershipSkinId, setPendingOwnershipSkinId] = useState<string | null>(null);
+  const [pendingWishlistSkinId, setPendingWishlistSkinId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Tracks the skin just marked owned so we can prompt "rate it?" right at
   // the moment of ownership — the highest-leverage nudge per SPEC.md's
@@ -82,7 +88,7 @@ export function CollectionBuilder({
 
   async function toggleOwnership(skinId: string) {
     const isOwned = ownedSkinIds.has(skinId);
-    setPendingSkinId(skinId);
+    setPendingOwnershipSkinId(skinId);
     setErrorMessage(null);
     if (isOwned) setJustOwnedSkinId(null);
 
@@ -114,14 +120,53 @@ export function CollectionBuilder({
       });
       setErrorMessage("Something went wrong — please try again.");
     } finally {
-      setPendingSkinId(null);
+      setPendingOwnershipSkinId(null);
+    }
+  }
+
+  // Fully independent of toggleOwnership — a skin can be wishlisted, owned,
+  // both, or neither. Wishlisting carries no score/rating (see
+  // SPEC.md section 15): it's a separate "do I want this" signal, not a
+  // quality judgment, so it gets its own state and its own API route.
+  async function toggleWishlist(skinId: string) {
+    const isWishlisted = wishlistedSkinIds.has(skinId);
+    setPendingWishlistSkinId(skinId);
+    setErrorMessage(null);
+
+    setWishlistedSkinIds((prev) => {
+      const next = new Set(prev);
+      if (isWishlisted) next.delete(skinId);
+      else next.add(skinId);
+      return next;
+    });
+
+    try {
+      const res = isWishlisted
+        ? await fetch(`/api/me/wishlist/${skinId}`, { method: "DELETE" })
+        : await fetch("/api/me/wishlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ skinId }),
+          });
+
+      if (!res.ok) throw new Error("Request failed");
+    } catch {
+      setWishlistedSkinIds((prev) => {
+        const next = new Set(prev);
+        if (isWishlisted) next.add(skinId);
+        else next.delete(skinId);
+        return next;
+      });
+      setErrorMessage("Something went wrong — please try again.");
+    } finally {
+      setPendingWishlistSkinId(null);
     }
   }
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-4 p-6">
       <div className="sticky top-14 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle/80 bg-background/90 py-3 backdrop-blur-md">
-        <h1 className="font-display text-xl font-bold">Build your collection</h1>
+        <h1 className="font-display text-xl font-bold">Skin Catalog</h1>
         <div className="flex items-center gap-3">
           <div className="text-lg font-medium">
             Total value:{" "}
@@ -133,7 +178,13 @@ export function CollectionBuilder({
             href="/collection"
             className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
           >
-            View my collection →
+            My collection →
+          </Link>
+          <Link
+            href="/wishlist"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
+          >
+            My wishlist →
           </Link>
         </div>
       </div>
@@ -203,6 +254,7 @@ export function CollectionBuilder({
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {visibleSkins.map((skin) => {
           const owned = ownedSkinIds.has(skin.id);
+          const wishlisted = wishlistedSkinIds.has(skin.id);
           const tier = getTierStyle(skin.contentTier.name);
           return (
             <div
@@ -238,17 +290,30 @@ export function CollectionBuilder({
                   {skin.contentTier.vpPrice.toLocaleString()} VP
                 </div>
               </Link>
-              <button
-                onClick={() => toggleOwnership(skin.id)}
-                disabled={pendingSkinId === skin.id}
-                className={`cursor-pointer rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
-                  owned
-                    ? "bg-surface-2 text-zinc-300 hover:bg-red-500/10 hover:text-red-400"
-                    : "bg-gradient-to-r from-accent to-accent-strong text-white"
-                }`}
-              >
-                {owned ? "Owned ✓ · tap to remove" : "+ Add to collection"}
-              </button>
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={() => toggleOwnership(skin.id)}
+                  disabled={pendingOwnershipSkinId === skin.id}
+                  className={`cursor-pointer rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
+                    owned
+                      ? "bg-surface-2 text-zinc-300 hover:bg-red-500/10 hover:text-red-400"
+                      : "bg-gradient-to-r from-accent to-accent-strong text-white"
+                  }`}
+                >
+                  {owned ? "Owned ✓ · tap to remove" : "+ Add to Collection"}
+                </button>
+                <button
+                  onClick={() => toggleWishlist(skin.id)}
+                  disabled={pendingWishlistSkinId === skin.id}
+                  className={`cursor-pointer rounded-full border px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
+                    wishlisted
+                      ? "border-transparent bg-accent/15 text-accent hover:bg-red-500/10 hover:text-red-400"
+                      : "border-border-subtle text-zinc-300 hover:border-accent/50 hover:text-accent"
+                  }`}
+                >
+                  {wishlisted ? "♥ Wishlisted · tap to remove" : "♡ Wishlist"}
+                </button>
+              </div>
               {justOwnedSkinId === skin.id && (
                 <Link
                   href={`/skins/${skin.id}`}

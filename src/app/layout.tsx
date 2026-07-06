@@ -71,11 +71,21 @@ export default async function RootLayout({
                     <span className="hidden sm:inline">My Collection</span>
                   </Link>
                   <Link
-                    href="/collection/build"
+                    href="/catalog"
                     className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"
                   >
-                    <span className="sm:hidden">Build</span>
-                    <span className="hidden sm:inline">Build Collection</span>
+                    <span className="sm:hidden">Catalog</span>
+                    <span className="hidden sm:inline">Skin Catalog</span>
+                  </Link>
+                  <Link
+                    href="/wishlist"
+                    aria-label="My Wishlist"
+                    className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"
+                  >
+                    <span className="sm:hidden" aria-hidden="true">
+                      ♥
+                    </span>
+                    <span className="hidden sm:inline">Wishlist</span>
                   </Link>
                   <span
                     title={user.email}

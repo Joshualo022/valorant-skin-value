@@ -22,6 +22,7 @@ model User {
   activeLoadouts ActiveLoadout[]
   reviews        Review[]
   flagsFiled     ReviewFlag[]    @relation("FlagsFiledByUser")
+  wishlists      Wishlist[]
 
   @@map("users")
 }
@@ -73,6 +74,7 @@ model Skin {
   ownedBy        UserOwnedSkin[]
   activeLoadouts ActiveLoadout[]
   reviews        Review[]
+  wishlistedBy   Wishlist[]
 
   @@map("skins")
 }
@@ -120,6 +122,21 @@ model ActiveLoadout {
 
   @@unique([userId, weaponId])
   @@map("active_loadout")
+}
+
+model Wishlist {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  skinId    String   @map("skin_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skin Skin @relation(fields: [skinId], references: [id])
+
+  // Deliberately no score/rating field here — wishlisting signals desire,
+  // not a quality/value judgment, which stays reserved for verified owners.
+  @@unique([userId, skinId])
+  @@map("wishlists")
 }
 
 enum VerificationStatus {

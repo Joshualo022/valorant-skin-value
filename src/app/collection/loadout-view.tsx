@@ -112,7 +112,7 @@ export function LoadoutView({
             </span>
           </div>
           <Link
-            href="/collection/build"
+            href="/catalog"
             className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
           >
             + Add or edit skins
@@ -271,7 +271,7 @@ export function LoadoutView({
                         );
                       })}
                       <Link
-                        href={`/collection/build?weapon=${weapon.id}`}
+                        href={`/catalog?weapon=${weapon.id}`}
                         className="flex min-h-[92px] w-24 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border-subtle p-2 text-center text-xs font-medium text-zinc-400 transition-colors hover:border-accent/50 hover:text-accent"
                       >
                         <span aria-hidden="true" className="text-lg leading-none">
@@ -295,8 +295,8 @@ export function LoadoutView({
         {allOwnedSkins.length === 0 ? (
           <p className="text-sm text-zinc-500">
             You haven&apos;t added any skins yet.{" "}
-            <Link href="/collection/build" className="text-accent underline">
-              Build your collection
+            <Link href="/catalog" className="text-accent underline">
+              Browse the catalog
             </Link>
             .
           </p>

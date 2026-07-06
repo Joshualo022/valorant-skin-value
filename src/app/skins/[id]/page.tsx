@@ -3,10 +3,12 @@ import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSkinWithAggregateScores, getReviewsForSkin } from "@/lib/reviews";
+import { getWishlistCount } from "@/lib/wishlist";
 import { getTierStyle } from "@/lib/tier-style";
 import { isVerifiedReviewer } from "@/lib/incentives";
 import { REVIEW_TAG_LABELS, type ReviewTagValue } from "@/lib/review-tags";
 import { ReviewSection } from "./review-section";
+import { SkinImage } from "./skin-image";
 
 export default async function SkinDetailPage({
   params,
@@ -16,9 +18,10 @@ export default async function SkinDetailPage({
   const { id } = await params;
   const user = await getCurrentUser();
 
-  const [result, reviews] = await Promise.all([
+  const [result, reviews, wishlistCount] = await Promise.all([
     getSkinWithAggregateScores(id),
     getReviewsForSkin(id),
+    getWishlistCount(id),
   ]);
 
   if (!result) {
@@ -55,19 +58,12 @@ export default async function SkinDetailPage({
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
       <div className="flex flex-col gap-6 rounded-2xl border border-border-subtle bg-surface p-6 sm:flex-row">
-        <div
-          className={`relative h-40 w-full shrink-0 rounded-xl bg-gradient-to-br ${tier.gradient} bg-surface-2 p-1 sm:w-64`}
-        >
-          <div className="relative h-full w-full rounded-lg bg-surface-2">
-            <Image
-              src={skin.imageUrl}
-              alt={skin.name}
-              fill
-              className="object-contain p-3"
-              sizes="256px"
-            />
-          </div>
-        </div>
+        <SkinImage
+          name={skin.name}
+          defaultImageUrl={skin.imageUrl}
+          chromas={skin.chromas}
+          gradient={tier.gradient}
+        />
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-2xl font-bold">{skin.name}</h1>
           <div className="text-sm text-zinc-400">
@@ -92,7 +88,7 @@ export default async function SkinDetailPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 rounded-2xl border border-border-subtle bg-surface p-4 text-center">
+      <div className="grid grid-cols-4 gap-4 rounded-2xl border border-border-subtle bg-surface p-4 text-center">
         <div>
           <div className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
             {avgQualityScore ? avgQualityScore.toFixed(1) : "—"}
@@ -110,6 +106,12 @@ export default async function SkinDetailPage({
             {wouldRebuyPercent !== null ? `${wouldRebuyPercent}%` : "—"}
           </div>
           <div className="text-xs text-zinc-400">Would Rebuy</div>
+        </div>
+        <div>
+          <div className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
+            {wishlistCount}
+          </div>
+          <div className="text-xs text-zinc-400">Wishlisted</div>
         </div>
       </div>
       <div className="text-center text-xs text-zinc-500">
