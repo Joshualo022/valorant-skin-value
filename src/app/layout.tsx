@@ -45,16 +45,21 @@ export default async function RootLayout({
           <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-6">
             <Link href="/" className="flex items-center gap-2">
               <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" aria-hidden="true">
-                <path
-                  d="M12 1.5 22.5 12 12 22.5 1.5 12Z"
-                  fill="url(#logo-gradient)"
-                />
                 <defs>
                   <linearGradient id="logo-gradient" x1="0" y1="0" x2="24" y2="24">
                     <stop offset="0" stopColor="#ff4d8f" />
                     <stop offset="1" stopColor="#ff2f92" />
                   </linearGradient>
                 </defs>
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="8.6"
+                  fill="none"
+                  stroke="url(#logo-gradient)"
+                  strokeWidth="1.5"
+                />
+                <path d="M12 7.5 15.75 12 12 16.5 8.25 12Z" fill="url(#logo-gradient)" />
               </svg>
               <span className="hidden font-display text-lg font-bold tracking-tight text-foreground sm:inline">
                 Valorant Skin Value
