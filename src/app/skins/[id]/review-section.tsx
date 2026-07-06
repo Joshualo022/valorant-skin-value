@@ -59,14 +59,14 @@ function ScoreControl({
           {lowEndpoint} → {highEndpoint}
         </span>
       </div>
-      <div className="flex flex-wrap gap-1">
+      <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-10">
         {SCORE_OPTIONS.map((n) => (
           <button
             key={n}
             type="button"
             onClick={() => onChange(n)}
             aria-pressed={value === n}
-            className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border text-sm font-semibold transition-colors ${
+            className={`flex h-9 w-full cursor-pointer items-center justify-center rounded-lg border text-sm font-semibold transition-colors ${
               value === n
                 ? "border-transparent bg-gradient-to-r from-accent to-accent-strong text-white"
                 : "border-border-subtle bg-surface-2 text-zinc-300 hover:border-zinc-600"

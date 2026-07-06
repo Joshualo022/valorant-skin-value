@@ -104,11 +104,19 @@ export function LoadoutView({
             </span>
           </div>
         </div>
-        <div className="text-left text-lg font-medium sm:text-right">
-          <div className="text-xs uppercase tracking-wide text-zinc-500">Total value</div>
-          <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
-            {totalValue.toLocaleString()} VP
-          </span>
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <div className="text-left text-lg font-medium sm:text-right">
+            <div className="text-xs uppercase tracking-wide text-zinc-500">Total value</div>
+            <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
+              {totalValue.toLocaleString()} VP
+            </span>
+          </div>
+          <Link
+            href="/collection/build"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
+          >
+            + Add or edit skins
+          </Link>
         </div>
       </div>
 
@@ -139,9 +147,27 @@ export function LoadoutView({
         </p>
       )}
 
+      <nav className="sticky top-14 z-10 -mx-6 flex gap-2 overflow-x-auto border-b border-border-subtle bg-background/85 px-6 py-2.5 backdrop-blur-md sm:mx-0 sm:rounded-2xl sm:border">
+        {weaponGroups.map((group) => (
+          <a
+            key={group.label}
+            href={`#group-${group.label.toLowerCase()}`}
+            className="shrink-0 rounded-full border border-border-subtle px-3 py-1 text-xs font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-foreground"
+          >
+            {group.label}
+          </a>
+        ))}
+        <a
+          href="#all-owned"
+          className="shrink-0 rounded-full border border-border-subtle px-3 py-1 text-xs font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-foreground"
+        >
+          All Owned
+        </a>
+      </nav>
+
       <div className="flex flex-col">
         {weaponGroups.map((group) => (
-          <div key={group.label} className="flex flex-col">
+          <div key={group.label} id={`group-${group.label.toLowerCase()}`} className="flex flex-col scroll-mt-32">
             <h2 className="pt-4 pb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
               {group.label}
             </h2>
@@ -193,68 +219,66 @@ export function LoadoutView({
                   {isExpanded && (
                     <div className="flex flex-wrap gap-3 pb-4">
                       {weapon.ownedSkins.length === 0 ? (
-                        <p className="text-sm text-zinc-500">
-                          You haven&apos;t added any skins for the {weapon.name} yet.{" "}
-                          <Link
-                            href={`/collection/build?weapon=${weapon.id}`}
-                            className="text-accent underline"
-                          >
-                            Add some
-                          </Link>
-                          .
+                        <p className="w-full text-sm text-zinc-500">
+                          You haven&apos;t added any skins for the {weapon.name} yet.
                         </p>
-                      ) : (
-                        <>
-                          {weapon.ownedSkins.map((skin) => {
-                            const pickTier = getTierStyle(skin.contentTier.name);
-                            const isActive = skin.skinId === activeSkinId;
-                            return (
-                              <button
-                                key={skin.skinId}
-                                onClick={() => selectSkin(weapon.id, skin.skinId)}
-                                disabled={pendingWeaponId === weapon.id}
-                                className={`flex w-24 cursor-pointer flex-col items-center gap-1 rounded-xl border bg-surface p-2 text-center transition-all disabled:opacity-50 ${
-                                  isActive
-                                    ? `border-transparent ${pickTier.ringGlow}`
-                                    : "border-border-subtle hover:border-zinc-600"
-                                }`}
-                              >
-                                <div className="relative h-12 w-full">
-                                  <Image
-                                    src={skin.imageUrl}
-                                    alt={skin.name}
-                                    fill
-                                    className="object-contain"
-                                    sizes="100px"
-                                  />
-                                </div>
-                                <div className="w-full truncate text-xs">{skin.name}</div>
-                                <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-                                  <div className="relative h-3 w-3 shrink-0">
-                                    <Image
-                                      src={skin.contentTier.iconUrl}
-                                      alt={skin.contentTier.name}
-                                      fill
-                                      className="object-contain"
-                                      sizes="12px"
-                                    />
-                                  </div>
-                                  {skin.contentTier.vpPrice.toLocaleString()} VP
-                                </div>
-                              </button>
-                            );
-                          })}
-                          {activeSkinId && (
-                            <button
-                              onClick={() => clearSkin(weapon.id)}
-                              disabled={pendingWeaponId === weapon.id}
-                              className="flex min-h-[92px] w-24 cursor-pointer items-center justify-center rounded-xl border border-border-subtle p-2 text-xs font-medium text-zinc-400 transition-colors hover:border-red-500/40 hover:text-red-400 disabled:opacity-50"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </>
-                      )}
+                      ) : null}
+                      {weapon.ownedSkins.map((skin) => {
+                        const pickTier = getTierStyle(skin.contentTier.name);
+                        const isActive = skin.skinId === activeSkinId;
+                        return (
+                          <button
+                            key={skin.skinId}
+                            onClick={() =>
+                              isActive ? clearSkin(weapon.id) : selectSkin(weapon.id, skin.skinId)
+                            }
+                            disabled={pendingWeaponId === weapon.id}
+                            title={isActive ? "Tap to remove" : undefined}
+                            className={`group relative flex w-24 cursor-pointer flex-col items-center gap-1 rounded-xl border bg-surface p-2 text-center transition-all disabled:opacity-50 ${
+                              isActive
+                                ? `border-transparent ${pickTier.ringGlow}`
+                                : "border-border-subtle hover:border-zinc-600"
+                            }`}
+                          >
+                            {isActive && (
+                              <span className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white group-hover:flex">
+                                ×
+                              </span>
+                            )}
+                            <div className="relative h-12 w-full">
+                              <Image
+                                src={skin.imageUrl}
+                                alt={skin.name}
+                                fill
+                                className="object-contain"
+                                sizes="100px"
+                              />
+                            </div>
+                            <div className="w-full truncate text-xs">{skin.name}</div>
+                            <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                              <div className="relative h-3 w-3 shrink-0">
+                                <Image
+                                  src={skin.contentTier.iconUrl}
+                                  alt={skin.contentTier.name}
+                                  fill
+                                  className="object-contain"
+                                  sizes="12px"
+                                />
+                              </div>
+                              {skin.contentTier.vpPrice.toLocaleString()} VP
+                            </div>
+                          </button>
+                        );
+                      })}
+                      <Link
+                        href={`/collection/build?weapon=${weapon.id}`}
+                        className="flex min-h-[92px] w-24 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border-subtle p-2 text-center text-xs font-medium text-zinc-400 transition-colors hover:border-accent/50 hover:text-accent"
+                      >
+                        <span aria-hidden="true" className="text-lg leading-none">
+                          +
+                        </span>
+                        Add {weapon.name} skin
+                      </Link>
                     </div>
                   )}
                 </div>
@@ -264,7 +288,7 @@ export function LoadoutView({
         ))}
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-border-subtle pt-6">
+      <div id="all-owned" className="flex scroll-mt-32 flex-col gap-2 border-t border-border-subtle pt-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
           All Owned Skins ({allOwnedSkins.length})
         </h2>

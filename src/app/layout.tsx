@@ -41,8 +41,8 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${chakraPetch.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background">
-        <header className="sticky top-0 z-20 border-b border-border-subtle/80 bg-background/85 backdrop-blur-md">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+        <header className="sticky top-0 z-20 h-14 border-b border-border-subtle/80 bg-background/85 backdrop-blur-md">
+          <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-6">
             <Link href="/" className="flex items-center gap-2">
               <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" aria-hidden="true">
                 <path
@@ -56,24 +56,26 @@ export default async function RootLayout({
                   </linearGradient>
                 </defs>
               </svg>
-              <span className="font-display text-lg font-bold tracking-tight text-foreground">
+              <span className="hidden font-display text-lg font-bold tracking-tight text-foreground sm:inline">
                 Valorant Skin Value
               </span>
             </Link>
-            <nav className="flex items-center gap-2 text-sm">
+            <nav className="flex items-center gap-1 text-sm sm:gap-2">
               {user ? (
                 <>
                   <Link
                     href="/collection"
-                    className="rounded-full px-3 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground"
+                    className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"
                   >
-                    My Collection
+                    <span className="sm:hidden">Mine</span>
+                    <span className="hidden sm:inline">My Collection</span>
                   </Link>
                   <Link
                     href="/collection/build"
-                    className="rounded-full px-3 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground"
+                    className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"
                   >
-                    Build Collection
+                    <span className="sm:hidden">Build</span>
+                    <span className="hidden sm:inline">Build Collection</span>
                   </Link>
                   <span
                     title={user.email}

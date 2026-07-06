@@ -52,7 +52,7 @@ export function CollectionBuilder({
   // the moment of ownership — the highest-leverage nudge per SPEC.md's
   // incentives section, rather than a generic reminder elsewhere.
   const [justOwnedSkinId, setJustOwnedSkinId] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>("name");
+  const [sortBy, setSortBy] = useState<SortOption>("price-desc");
   const [searchQuery, setSearchQuery] = useState("");
 
   const skinsById = useMemo(() => new Map(skins.map((s) => [s.id, s])), [skins]);
@@ -122,11 +122,19 @@ export function CollectionBuilder({
     <div className="mx-auto flex max-w-6xl flex-col gap-4 p-6">
       <div className="sticky top-14 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle/80 bg-background/90 py-3 backdrop-blur-md">
         <h1 className="font-display text-xl font-bold">Build your collection</h1>
-        <div className="text-lg font-medium">
-          Total value:{" "}
-          <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-transparent">
-            {totalValue.toLocaleString()} VP
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="text-lg font-medium">
+            Total value:{" "}
+            <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-transparent">
+              {totalValue.toLocaleString()} VP
+            </span>
+          </div>
+          <Link
+            href="/collection"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
+          >
+            View my collection →
+          </Link>
         </div>
       </div>
 
