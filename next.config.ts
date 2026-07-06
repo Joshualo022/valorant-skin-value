@@ -7,6 +7,20 @@ const nextConfig: NextConfig = {
     // explicitly allow-listed.
     remotePatterns: [new URL("https://media.valorant-api.com/**")],
   },
+  async redirects() {
+    return [
+      // www.myradianite.com is canonical — send apex-domain requests there,
+      // preserving path and query string. 308 (permanent: true) tells
+      // browsers/search engines to remember this rather than re-check it
+      // on every visit.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "myradianite.com" }],
+        destination: "https://www.myradianite.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
