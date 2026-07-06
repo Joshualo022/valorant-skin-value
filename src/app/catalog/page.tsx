@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getOwnedSkinsWithValue } from "@/lib/collection";
 import { compareWeapons } from "@/lib/weapon-order";
 import { SkinCatalog } from "./skin-catalog";
 
@@ -10,18 +11,16 @@ export default async function CatalogPage() {
     redirect("/login");
   }
 
-  const [skins, weapons, ownedSkins, wishlistedSkins] = await Promise.all([
-    prisma.skin.findMany({
-      select: {
-        id: true,
-        name: true,
-        imageUrl: true,
-        weaponId: true,
-        contentTier: { select: { name: true, vpPrice: true, iconUrl: true } },
-      },
-      orderBy: { name: "asc" },
-    }),
+  // The catalog itself (all 1000+ skins) is no longer fetched here — it's
+  // loaded a page at a time by the client via /api/skins/catalog, since
+  // shipping every skin's data on first load is exactly what made this page
+  // slow. Only the small, per-user stuff still comes from the server.
+  const [weapons, tiers, ownedSkins, wishlistedSkins, { totalValue }] = await Promise.all([
     prisma.weapon.findMany(),
+    prisma.contentTier.findMany({
+      select: { id: true, name: true, vpPrice: true },
+      orderBy: { vpPrice: "asc" },
+    }),
     prisma.userOwnedSkin.findMany({
       where: { userId: user.id },
       select: { skinId: true },
@@ -30,14 +29,16 @@ export default async function CatalogPage() {
       where: { userId: user.id },
       select: { skinId: true },
     }),
+    getOwnedSkinsWithValue(user.id),
   ]);
 
   return (
     <SkinCatalog
-      skins={skins}
       weapons={[...weapons].sort(compareWeapons)}
+      tiers={tiers}
       initialOwnedSkinIds={ownedSkins.map((o) => o.skinId)}
       initialWishlistedSkinIds={wishlistedSkins.map((w) => w.skinId)}
+      totalValue={totalValue}
     />
   );
 }

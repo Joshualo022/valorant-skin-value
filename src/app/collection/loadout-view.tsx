@@ -271,7 +271,7 @@ export function LoadoutView({
                         );
                       })}
                       <Link
-                        href={`/catalog?weapon=${weapon.id}`}
+                        href={`/catalog?weapon=${weapon.name.toLowerCase()}`}
                         className="flex min-h-[92px] w-24 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border-subtle p-2 text-center text-xs font-medium text-zinc-400 transition-colors hover:border-accent/50 hover:text-accent"
                       >
                         <span aria-hidden="true" className="text-lg leading-none">

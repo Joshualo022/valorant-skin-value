@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getTierStyle } from "@/lib/tier-style";
 
 type SkinSummary = {
@@ -19,6 +19,12 @@ type Weapon = {
   name: string;
 };
 
+type ContentTierOption = {
+  id: string;
+  name: string;
+  vpPrice: number;
+};
+
 type SortOption = "name" | "price-asc" | "price-desc";
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
@@ -27,29 +33,63 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: "price-desc", label: "Price (high to low)" },
 ];
 
+const PAGE_SIZE = 24;
+
 export function SkinCatalog({
-  skins,
   weapons,
+  tiers,
   initialOwnedSkinIds,
   initialWishlistedSkinIds,
+  totalValue,
 }: {
-  skins: SkinSummary[];
   weapons: Weapon[];
+  tiers: ContentTierOption[];
   initialOwnedSkinIds: string[];
   initialWishlistedSkinIds: string[];
+  totalValue: number;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const requestedWeaponId = searchParams.get("weapon");
+
+  // Filters live in the URL (?weapon=vandal&tier=select) so a filtered view
+  // is shareable/bookmarkable, per SPEC — but applying a filter never
+  // triggers a full navigation: `router.replace` just rewrites the URL bar,
+  // while the actual filtered page of skins is (re)fetched from
+  // /api/skins/catalog below. `scroll: false` stops Next.js from jumping
+  // the page back to top on every click.
+  function setFilterParam(key: string, value: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === null) params.delete(key);
+    else params.set(key, value);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  const requestedWeaponSlug = searchParams.get("weapon");
+  const requestedTierSlug = searchParams.get("tier");
 
   const [ownedSkinIds, setOwnedSkinIds] = useState(() => new Set(initialOwnedSkinIds));
   const [wishlistedSkinIds, setWishlistedSkinIds] = useState(
     () => new Set(initialWishlistedSkinIds)
   );
-  const [selectedWeaponId, setSelectedWeaponId] = useState(
+  // null = "All Weapons" — the default landing state when arriving from the
+  // home page or nav (no ?weapon= param). A specific weapon is only
+  // pre-selected when the URL asked for one, e.g. the per-weapon "add skin"
+  // deep link from My Collection — arriving from anywhere else should never
+  // silently narrow the view to whichever weapon happens to sort first.
+  const [selectedWeaponSlug, setSelectedWeaponSlug] = useState<string | null>(
     () =>
-      (requestedWeaponId && weapons.some((w) => w.id === requestedWeaponId)
-        ? requestedWeaponId
-        : weapons[0]?.id) ?? ""
+      requestedWeaponSlug && weapons.some((w) => w.name.toLowerCase() === requestedWeaponSlug)
+        ? requestedWeaponSlug
+        : null
+  );
+  // null = "All tiers" — a secondary, optional filter layered on top of the
+  // primary weapon filter (see the two filter rows below).
+  const [selectedTierSlug, setSelectedTierSlug] = useState<string | null>(
+    () =>
+      requestedTierSlug && tiers.some((t) => t.name.toLowerCase() === requestedTierSlug)
+        ? requestedTierSlug
+        : null
   );
   const [pendingOwnershipSkinId, setPendingOwnershipSkinId] = useState<string | null>(null);
   const [pendingWishlistSkinId, setPendingWishlistSkinId] = useState<string | null>(null);
@@ -60,31 +100,107 @@ export function SkinCatalog({
   const [justOwnedSkinId, setJustOwnedSkinId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("price-desc");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
-  const skinsById = useMemo(() => new Map(skins.map((s) => [s.id, s])), [skins]);
+  const selectedWeaponId = weapons.find((w) => w.name.toLowerCase() === selectedWeaponSlug)?.id;
+  const selectedTierName = tiers.find((t) => t.name.toLowerCase() === selectedTierSlug)?.name;
 
-  // Derived, not stored: recomputed from the owned-set + each skin's tier
-  // price whenever ownership changes, rather than re-fetched from the server.
-  const totalValue = useMemo(() => {
-    let total = 0;
-    for (const id of ownedSkinIds) {
-      const skin = skinsById.get(id);
-      if (skin) total += skin.contentTier.vpPrice;
-    }
-    return total;
-  }, [ownedSkinIds, skinsById]);
+  function selectWeapon(weapon: Weapon | null) {
+    const slug = weapon ? weapon.name.toLowerCase() : null;
+    setSelectedWeaponSlug(slug);
+    setFilterParam("weapon", slug);
+  }
 
-  const visibleSkins = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    const filtered = skins.filter(
-      (s) => s.weaponId === selectedWeaponId && (!query || s.name.toLowerCase().includes(query))
+  function selectTier(tier: ContentTierOption | null) {
+    const slug = tier ? tier.name.toLowerCase() : null;
+    setSelectedTierSlug(slug);
+    setFilterParam("tier", slug);
+  }
+
+  // Debounce typed search so every keystroke doesn't fire its own request —
+  // same "schedule it, clean it up" shape as the home page's search box.
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  // --- Pagination state -------------------------------------------------
+  const [loadedSkins, setLoadedSkins] = useState<SkinSummary[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Guards against a slow, now-stale request overwriting a newer one — e.g.
+  // switching weapons quickly, where the first request's response arrives
+  // after the second one already reset the list.
+  const requestIdRef = useRef(0);
+
+  const fetchPage = useCallback(
+    async (cursor: string | null) => {
+      const requestId = ++requestIdRef.current;
+      if (cursor === null) setIsLoadingInitial(true);
+      else setIsLoadingMore(true);
+
+      const params = new URLSearchParams();
+      if (selectedWeaponId) params.set("weaponId", selectedWeaponId);
+      if (selectedTierName) params.set("tierName", selectedTierName);
+      if (debouncedSearchQuery) params.set("search", debouncedSearchQuery);
+      params.set("sort", sortBy);
+      if (cursor) params.set("cursor", cursor);
+
+      try {
+        const res = await fetch(`/api/skins/catalog?${params.toString()}`);
+        if (!res.ok) throw new Error("Request failed");
+        const data: { skins: SkinSummary[]; nextCursor: string | null } = await res.json();
+
+        if (requestId !== requestIdRef.current) return; // superseded by a newer request
+
+        setLoadedSkins((prev) => (cursor === null ? data.skins : [...prev, ...data.skins]));
+        setNextCursor(data.nextCursor);
+      } catch {
+        if (requestId !== requestIdRef.current) return;
+        setErrorMessage("Something went wrong loading skins — please try again.");
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setIsLoadingInitial(false);
+          setIsLoadingMore(false);
+        }
+      }
+    },
+    [selectedWeaponId, selectedTierName, debouncedSearchQuery, sortBy]
+  );
+
+  // Any filter change resets to page 1 rather than appending — the old
+  // results no longer match what's being asked for.
+  useEffect(() => {
+    setLoadedSkins([]);
+    setNextCursor(null);
+    fetchPage(null);
+  }, [fetchPage]);
+
+  // Infinite scroll: a sentinel element sits just past the last loaded
+  // card; once it scrolls into view, fetch the next page using the cursor
+  // from the previous one. `rootMargin` fires this a bit before the
+  // sentinel is actually on screen, so the next page is usually ready
+  // before the user reaches the bottom.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!nextCursor || isLoadingInitial) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore) {
+          fetchPage(nextCursor);
+        }
+      },
+      { rootMargin: "600px" }
     );
-    return [...filtered].sort((a, b) => {
-      if (sortBy === "price-asc") return a.contentTier.vpPrice - b.contentTier.vpPrice;
-      if (sortBy === "price-desc") return b.contentTier.vpPrice - a.contentTier.vpPrice;
-      return a.name.localeCompare(b.name);
-    });
-  }, [skins, selectedWeaponId, sortBy, searchQuery]);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [nextCursor, isLoadingInitial, isLoadingMore, fetchPage]);
 
   async function toggleOwnership(skinId: string) {
     const isOwned = ownedSkinIds.has(skinId);
@@ -214,14 +330,30 @@ export function SkinCatalog({
         />
       </div>
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex gap-2 overflow-x-auto pb-2">
+      {/* Filter rows, stacked loosest-to-tightest: weapon is the primary,
+          always-visible, full-width control (this is a task-oriented tool
+          for building out a collection weapon-by-weapon); tier is a
+          secondary, lighter-weight refinement underneath it. Any future
+          filter (skin line, has-chromas) is just another row appended
+          here — nothing above needs to change shape to fit it. */}
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <button
+            onClick={() => selectWeapon(null)}
+            className={`cursor-pointer whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+              selectedWeaponSlug === null
+                ? "border-transparent bg-gradient-to-r from-accent to-accent-strong text-white"
+                : "border-border-subtle text-zinc-300 hover:bg-surface"
+            }`}
+          >
+            All Weapons
+          </button>
           {weapons.map((weapon) => (
             <button
               key={weapon.id}
-              onClick={() => setSelectedWeaponId(weapon.id)}
+              onClick={() => selectWeapon(weapon)}
               className={`cursor-pointer whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                weapon.id === selectedWeaponId
+                weapon.name.toLowerCase() === selectedWeaponSlug
                   ? "border-transparent bg-gradient-to-r from-accent to-accent-strong text-white"
                   : "border-border-subtle text-zinc-300 hover:bg-surface"
               }`}
@@ -231,101 +363,173 @@ export function SkinCatalog({
           ))}
         </div>
 
-        <label className="flex shrink-0 items-center gap-2 text-sm text-zinc-400">
-          Sort by
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="cursor-pointer rounded-full border border-border-subtle bg-surface px-3 py-1.5 text-foreground focus:border-accent focus:outline-none"
-          >
-            {SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {visibleSkins.length === 0 && (
-        <p className="text-sm text-zinc-500">No skins match &quot;{searchQuery}&quot;.</p>
-      )}
-
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {visibleSkins.map((skin) => {
-          const owned = ownedSkinIds.has(skin.id);
-          const wishlisted = wishlistedSkinIds.has(skin.id);
-          const tier = getTierStyle(skin.contentTier.name);
-          return (
-            <div
-              key={skin.id}
-              className={`group flex flex-col gap-2 rounded-2xl border bg-surface p-3 transition-all ${
-                owned
-                  ? `border-transparent ${tier.ringGlow}`
-                  : "border-border-subtle hover:border-zinc-600"
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="pr-0.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Tier
+            </span>
+            <button
+              onClick={() => selectTier(null)}
+              className={`cursor-pointer whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                selectedTierSlug === null
+                  ? "border-transparent bg-surface-2 text-foreground"
+                  : "border-border-subtle text-zinc-400 hover:border-zinc-600"
               }`}
             >
-              <Link href={`/skins/${skin.id}`} className="flex flex-col gap-2">
-                <div className="relative h-20 w-full rounded-lg bg-surface-2">
-                  <Image
-                    src={skin.imageUrl}
-                    alt={skin.name}
-                    fill
-                    className="object-contain transition-transform group-hover:scale-105"
-                    sizes="200px"
-                  />
-                </div>
-                <div className="truncate text-sm font-medium hover:underline">{skin.name}</div>
-                <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-                  <div className="relative h-3.5 w-3.5 shrink-0">
-                    <Image
-                      src={skin.contentTier.iconUrl}
-                      alt={skin.contentTier.name}
-                      fill
-                      className="object-contain"
-                      sizes="14px"
-                    />
-                  </div>
-                  <span className={tier.text}>{skin.contentTier.name}</span> ·{" "}
-                  {skin.contentTier.vpPrice.toLocaleString()} VP
-                </div>
-              </Link>
-              <div className="flex flex-col gap-1.5">
+              All
+            </button>
+            {tiers.map((tier) => {
+              const style = getTierStyle(tier.name);
+              const isActive = tier.name.toLowerCase() === selectedTierSlug;
+              return (
                 <button
-                  onClick={() => toggleOwnership(skin.id)}
-                  disabled={pendingOwnershipSkinId === skin.id}
-                  className={`cursor-pointer rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
+                  key={tier.id}
+                  onClick={() => selectTier(tier)}
+                  title={`${tier.vpPrice.toLocaleString()} VP`}
+                  className={`cursor-pointer whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                    isActive
+                      ? `border-transparent bg-surface-2 ${style.text}`
+                      : "border-border-subtle text-zinc-400 hover:border-zinc-600"
+                  }`}
+                >
+                  {tier.name}
+                </button>
+              );
+            })}
+          </div>
+
+          <label className="flex shrink-0 items-center gap-2 text-sm text-zinc-400">
+            Sort by
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="cursor-pointer rounded-full border border-border-subtle bg-surface px-3 py-1.5 text-foreground focus:border-accent focus:outline-none"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {isLoadingInitial ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+            <div
+              key={i}
+              className="flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface p-3"
+            >
+              <div className="h-20 w-full animate-pulse rounded-lg bg-surface-2" />
+              <div className="h-4 w-3/4 animate-pulse rounded-full bg-surface-2" />
+              <div className="h-3 w-1/2 animate-pulse rounded-full bg-surface-2" />
+              <div className="h-7 w-full animate-pulse rounded-full bg-surface-2" />
+              <div className="h-7 w-full animate-pulse rounded-full bg-surface-2" />
+            </div>
+          ))}
+        </div>
+      ) : loadedSkins.length === 0 ? (
+        <p className="text-sm text-zinc-500">
+          {debouncedSearchQuery
+            ? `No skins match "${debouncedSearchQuery}".`
+            : "No skins match the current filters."}
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {loadedSkins.map((skin) => {
+              const owned = ownedSkinIds.has(skin.id);
+              const wishlisted = wishlistedSkinIds.has(skin.id);
+              const tier = getTierStyle(skin.contentTier.name);
+              return (
+                <div
+                  key={skin.id}
+                  className={`group flex flex-col gap-2 rounded-2xl border bg-surface p-3 transition-all ${
                     owned
-                      ? "bg-surface-2 text-zinc-300 hover:bg-red-500/10 hover:text-red-400"
-                      : "bg-gradient-to-r from-accent to-accent-strong text-white"
+                      ? `border-transparent ${tier.ringGlow}`
+                      : "border-border-subtle hover:border-zinc-600"
                   }`}
                 >
-                  {owned ? "Owned ✓ · tap to remove" : "+ Add to Collection"}
-                </button>
-                <button
-                  onClick={() => toggleWishlist(skin.id)}
-                  disabled={pendingWishlistSkinId === skin.id}
-                  className={`cursor-pointer rounded-full border px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
-                    wishlisted
-                      ? "border-transparent bg-accent/15 text-accent hover:bg-red-500/10 hover:text-red-400"
-                      : "border-border-subtle text-zinc-300 hover:border-accent/50 hover:text-accent"
-                  }`}
-                >
-                  {wishlisted ? "♥ Wishlisted · tap to remove" : "♡ Wishlist"}
-                </button>
-              </div>
-              {justOwnedSkinId === skin.id && (
-                <Link
-                  href={`/skins/${skin.id}`}
-                  className="flex items-center justify-between rounded-full bg-accent/15 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/25"
-                >
-                  You own this — rate it? <span aria-hidden="true">→</span>
-                </Link>
+                  <Link href={`/skins/${skin.id}`} className="flex flex-col gap-2">
+                    <div className="relative h-20 w-full rounded-lg bg-surface-2">
+                      <Image
+                        src={skin.imageUrl}
+                        alt={skin.name}
+                        fill
+                        className="object-contain transition-transform group-hover:scale-105"
+                        sizes="200px"
+                      />
+                    </div>
+                    <div className="truncate text-sm font-medium hover:underline">
+                      {skin.name}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+                      <div className="relative h-3.5 w-3.5 shrink-0">
+                        <Image
+                          src={skin.contentTier.iconUrl}
+                          alt={skin.contentTier.name}
+                          fill
+                          className="object-contain"
+                          sizes="14px"
+                        />
+                      </div>
+                      <span className={tier.text}>{skin.contentTier.name}</span> ·{" "}
+                      {skin.contentTier.vpPrice.toLocaleString()} VP
+                    </div>
+                  </Link>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      onClick={() => toggleOwnership(skin.id)}
+                      disabled={pendingOwnershipSkinId === skin.id}
+                      className={`cursor-pointer rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
+                        owned
+                          ? "bg-surface-2 text-zinc-300 hover:bg-red-500/10 hover:text-red-400"
+                          : "bg-gradient-to-r from-accent to-accent-strong text-white"
+                      }`}
+                    >
+                      {owned ? "Owned ✓ · tap to remove" : "+ Add to Collection"}
+                    </button>
+                    <button
+                      onClick={() => toggleWishlist(skin.id)}
+                      disabled={pendingWishlistSkinId === skin.id}
+                      className={`cursor-pointer rounded-full border px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
+                        wishlisted
+                          ? "border-transparent bg-accent/15 text-accent hover:bg-red-500/10 hover:text-red-400"
+                          : "border-border-subtle text-zinc-300 hover:border-accent/50 hover:text-accent"
+                      }`}
+                    >
+                      {wishlisted ? "♥ Wishlisted · tap to remove" : "♡ Wishlist"}
+                    </button>
+                  </div>
+                  {justOwnedSkinId === skin.id && (
+                    <Link
+                      href={`/skins/${skin.id}`}
+                      className="flex items-center justify-between rounded-full bg-accent/15 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/25"
+                    >
+                      You own this — rate it? <span aria-hidden="true">→</span>
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Sentinel for the IntersectionObserver above — invisible, just
+              a scroll-position marker near the bottom of the loaded list. */}
+          {nextCursor && (
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              {isLoadingMore && (
+                <div className="flex items-center gap-2 text-sm text-zinc-500">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-600 border-t-accent" />
+                  Loading more...
+                </div>
               )}
             </div>
-          );
-        })}
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
