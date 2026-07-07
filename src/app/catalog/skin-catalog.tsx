@@ -300,10 +300,10 @@ export function SkinCatalog({
   }
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-4 p-6">
-      <div className="sticky top-14 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle/80 bg-background/90 py-3 backdrop-blur-md">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-6">
+      <div className="sticky top-14 z-10 flex flex-col gap-3 border-b border-border-subtle/80 bg-background/90 py-3 backdrop-blur-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
         <h1 className="font-display text-xl font-bold">Skin Catalog</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="text-lg font-medium">
             Total value:{" "}
             <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-transparent">

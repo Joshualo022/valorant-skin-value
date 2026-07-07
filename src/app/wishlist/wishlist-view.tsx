@@ -48,7 +48,7 @@ export function WishlistView({
   const currentTotal = skins.reduce((sum, s) => sum + getSkinPrice(s), 0);
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-4 p-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-6">
       <div className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong font-display text-lg font-bold text-white">

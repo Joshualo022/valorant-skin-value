@@ -44,6 +44,9 @@ Built and deployed:
 - **Shareable "Flex" Collection View** (SPEC.md section 17): opt-in public link at `/collection/:slug` (`collectionShareSlug` on `User`, enable/disable via `POST`/`DELETE /api/me/share`), showing face/realistic value, collection size, a rarest-item callout, and the loadout — plus a dynamic Open Graph share-card image via `next/og`'s `ImageResponse` (`src/app/collection/[slug]/opengraph-image.tsx`). The spec's "rarest item" was meant to use an `availability_status` field that doesn't exist in the schema; by user decision, highest resolved VP price is used as a rough rarity proxy instead — revisit if a real availability signal gets added later.
 
 Known follow-ups, not yet done:
-- **Supabase Auth Site URL** still needs a manual update in the Supabase dashboard (Authentication → URL Configuration) to include `https://www.myradianite.com` — until then, production email-confirmation links won't work correctly.
 - **Naming**: decided to keep "Valorant Skin Value" as the page title/wordmark for now (self-explanatory to new visitors); `myradianite.com` is just the domain for now. Revisit a full rebrand to "Radianite" closer to launch if wanted.
-- All SPEC.md feature sections (1-18) are now built. Remaining Week 4 items: seed real review/collection data, general polish, finalize README.
+- All SPEC.md feature sections (1-18) are now built. Remaining Week 4 items: seed real review/collection data, general polish.
+
+Done since the last update:
+- **Supabase Auth Site URL** updated in the Supabase dashboard to include `https://www.myradianite.com` — production email-confirmation links now work correctly.
+- **README** rewritten (`README.md`) with features, tech stack, data sourcing/pricing notes, and local dev setup.

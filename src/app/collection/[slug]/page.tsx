@@ -36,7 +36,7 @@ export default async function SharedCollectionPage({
   const rarestTier = rarestItem ? getTierStyle(rarestItem.skin.contentTier.name) : null;
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
       <div className="flex flex-col items-center gap-1 pt-4 text-center">
         <h1 className="font-display text-2xl font-bold sm:text-3xl">
           {displayName}&apos;s Collection
