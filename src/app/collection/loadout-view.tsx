@@ -5,11 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
 import { isVerifiedReviewer } from "@/lib/incentives";
+import { getSkinPrice } from "@/lib/pricing";
 
 export type OwnedSkin = {
   skinId: string;
   name: string;
   imageUrl: string;
+  vpPriceOverride: number | null;
   contentTier: { name: string; vpPrice: number; iconUrl: string };
 };
 
@@ -265,7 +267,7 @@ export function LoadoutView({
                                   sizes="12px"
                                 />
                               </div>
-                              {skin.contentTier.vpPrice.toLocaleString()} VP
+                              {getSkinPrice(skin).toLocaleString()} VP
                             </div>
                           </button>
                         );
@@ -331,7 +333,7 @@ export function LoadoutView({
                         sizes="14px"
                       />
                     </div>
-                    <span className={tier.text}>{skin.contentTier.vpPrice.toLocaleString()} VP</span>
+                    <span className={tier.text}>{getSkinPrice(skin).toLocaleString()} VP</span>
                   </div>
                 </Link>
               );

@@ -26,6 +26,7 @@ export default async function MyCollectionPage() {
       skinId: owned.skin.id,
       name: owned.skin.name,
       imageUrl: owned.skin.imageUrl,
+      vpPriceOverride: owned.skin.vpPriceOverride,
       contentTier: owned.skin.contentTier,
     };
     const list = ownedByWeaponId.get(owned.skin.weaponId) ?? [];

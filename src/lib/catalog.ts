@@ -99,6 +99,7 @@ export async function getCatalogPage({
       name: true,
       imageUrl: true,
       weaponId: true,
+      vpPriceOverride: true,
       contentTier: { select: { name: true, vpPrice: true, iconUrl: true } },
     },
   });

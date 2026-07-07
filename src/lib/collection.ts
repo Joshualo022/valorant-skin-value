@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { getSkinPrice } from "@/lib/pricing";
 
-// A user's collection value is the sum of the VP price of each owned
-// skin's content tier — the core aggregation the whole app is built around.
+// A user's collection value is the sum of each owned skin's resolved VP
+// price (tier price, or the skin's own override) — the core aggregation the
+// whole app is built around.
 export async function getOwnedSkinsWithValue(userId: string) {
   const ownedSkins = await prisma.userOwnedSkin.findMany({
     where: { userId },
@@ -13,7 +15,7 @@ export async function getOwnedSkinsWithValue(userId: string) {
   });
 
   const totalValue = ownedSkins.reduce(
-    (sum, owned) => sum + owned.skin.contentTier.vpPrice,
+    (sum, owned) => sum + getSkinPrice(owned.skin),
     0
   );
 

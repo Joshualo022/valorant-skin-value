@@ -3,7 +3,9 @@
 // upserts them, so re-running after a new Act adds new skins without
 // duplicating existing ones. Content tier VP pricing is hand-maintained
 // separately (see seed-data/content-tier-prices.ts) since Riot's API doesn't
-// expose real-money/VP pricing.
+// expose real-money/VP pricing. A final pass (setMeleeOverrides) fills in
+// Skin.vpPriceOverride for melee skins, whose real price diverges from their
+// tier's gun-skin price.
 import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
 import { CONTENT_TIER_VP_PRICES } from "./seed-data/content-tier-prices";
@@ -178,6 +180,71 @@ async function main() {
   console.log(
     `Seeded ${skinCount} skins across ${skinLineIdByThemeUuid.size} skin lines, ${chromaCount} chromas.`
   );
+
+  await setMeleeOverrides();
+}
+
+// Content tier VP price is tuned for gun skins. Melee skins in the same
+// skin line cost roughly 2x the gun tier's price instead, so they need a
+// per-skin vpPriceOverride rather than trusting the tier price (see
+// Skin.vpPriceOverride and src/lib/pricing.ts).
+const MELEE_HEURISTIC_TIERS = new Set(["Select", "Deluxe", "Premium", "Ultra"]);
+
+async function setMeleeOverrides() {
+  const meleeWeapon = await prisma.weapon.findUnique({ where: { name: "Melee" } });
+  if (!meleeWeapon) {
+    console.warn('No weapon named "Melee" found — skipping melee price override pass.');
+    return;
+  }
+
+  const meleeSkins = await prisma.skin.findMany({ where: { weaponId: meleeWeapon.id } });
+
+  const setViaHeuristic: { name: string; price: number }[] = [];
+  const needsManual: string[] = [];
+
+  for (const meleeSkin of meleeSkins) {
+    // Non-null and non-zero means this was already priced (by a previous
+    // heuristic run or by hand) — skip it so re-seeding after a new Act
+    // never clobbers a manual entry. A stored 0 is not "priced" yet, so it's
+    // retried every run in case sibling data has since appeared.
+    if (meleeSkin.vpPriceOverride !== null && meleeSkin.vpPriceOverride !== 0) {
+      continue;
+    }
+
+    let override = 0;
+
+    if (meleeSkin.skinLineId) {
+      const siblings = await prisma.skin.findMany({
+        where: { skinLineId: meleeSkin.skinLineId, weaponId: { not: meleeWeapon.id } },
+        include: { contentTier: true },
+      });
+
+      if (siblings.length > 0 && MELEE_HEURISTIC_TIERS.has(siblings[0].contentTier.name)) {
+        override = siblings[0].contentTier.vpPrice * 2;
+      }
+    }
+
+    await prisma.skin.update({
+      where: { id: meleeSkin.id },
+      data: { vpPriceOverride: override },
+    });
+
+    if (override > 0) {
+      setViaHeuristic.push({ name: meleeSkin.name, price: override });
+    } else {
+      needsManual.push(meleeSkin.name);
+    }
+  }
+
+  console.log(`Set ${setViaHeuristic.length} melee price override(s) via the 2x tier heuristic:`);
+  for (const { name, price } of setViaHeuristic) {
+    console.log(`  - ${name}: ${price} VP`);
+  }
+
+  console.log(`${needsManual.length} melee skin(s) landed at 0 VP and need manual pricing:`);
+  for (const name of needsManual) {
+    console.log(`  - ${name}`);
+  }
 }
 
 main()

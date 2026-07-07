@@ -59,13 +59,18 @@ model ContentTier {
 }
 
 model Skin {
-  id            String @id @default(uuid())
-  name          String
-  weaponId      String @map("weapon_id")
-  skinLineId    String? @map("skin_line_id")
-  contentTierId String @map("content_tier_id")
-  imageUrl      String @map("image_url")
-  riotContentId String @unique @map("riot_content_id") // source ID from valorant-api.com, for re-sync
+  id               String  @id @default(uuid())
+  name             String
+  weaponId         String  @map("weapon_id")
+  skinLineId       String? @map("skin_line_id")
+  contentTierId    String  @map("content_tier_id")
+  imageUrl         String  @map("image_url")
+  riotContentId    String  @unique @map("riot_content_id") // source ID from valorant-api.com, for re-sync
+  // Overrides the content tier's VP price for this skin. Null = trust the
+  // tier price (true for every non-melee skin). Melee skins in a skin line
+  // are priced independently of the gun skins sharing that tier — see
+  // prisma/seed.ts's melee override pass and src/lib/pricing.ts.
+  vpPriceOverride  Int?    @map("vp_price_override")
 
   weapon      Weapon        @relation(fields: [weaponId], references: [id])
   skinLine    SkinLine?     @relation(fields: [skinLineId], references: [id])

@@ -5,12 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getTierStyle } from "@/lib/tier-style";
+import { getSkinPrice } from "@/lib/pricing";
 
 type SkinSummary = {
   id: string;
   name: string;
   imageUrl: string;
   weaponId: string;
+  vpPriceOverride: number | null;
   contentTier: { name: string; vpPrice: number; iconUrl: string };
 };
 
@@ -476,7 +478,7 @@ export function SkinCatalog({
                         />
                       </div>
                       <span className={tier.text}>{skin.contentTier.name}</span> ·{" "}
-                      {skin.contentTier.vpPrice.toLocaleString()} VP
+                      {getSkinPrice(skin).toLocaleString()} VP
                     </div>
                   </Link>
                   <div className="flex flex-col gap-1.5">

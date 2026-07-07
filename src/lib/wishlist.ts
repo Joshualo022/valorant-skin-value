@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { getSkinPrice } from "@/lib/pricing";
 
-// Mirrors getOwnedSkinsWithValue's shape — same "sum of tier VP price"
+// Mirrors getOwnedSkinsWithValue's shape — same "sum of resolved VP price"
 // aggregation, just over wishlisted skins instead of owned ones. Framed
 // aspirationally ("if I bought all of this") rather than retrospectively.
 export async function getWishlistedSkinsWithValue(userId: string) {
@@ -13,7 +14,7 @@ export async function getWishlistedSkinsWithValue(userId: string) {
   });
 
   const totalValue = wishlistedSkins.reduce(
-    (sum, entry) => sum + entry.skin.contentTier.vpPrice,
+    (sum, entry) => sum + getSkinPrice(entry.skin),
     0
   );
 

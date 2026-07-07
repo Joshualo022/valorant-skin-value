@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSkinWithAggregateScores, getReviewsForSkin } from "@/lib/reviews";
 import { getWishlistCount } from "@/lib/wishlist";
 import { getTierStyle } from "@/lib/tier-style";
+import { getSkinPrice } from "@/lib/pricing";
 import { isVerifiedReviewer } from "@/lib/incentives";
 import { REVIEW_TAG_LABELS, type ReviewTagValue } from "@/lib/review-tags";
 import { ReviewSection } from "./review-section";
@@ -82,7 +83,7 @@ export default async function SkinDetailPage({
             </div>
             <span className={`font-semibold ${tier.text}`}>{skin.contentTier.name}</span>
             <span className="text-zinc-400">
-              · {skin.contentTier.vpPrice.toLocaleString()} VP
+              · {getSkinPrice(skin).toLocaleString()} VP
             </span>
           </div>
         </div>
