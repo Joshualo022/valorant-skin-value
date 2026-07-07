@@ -1,4 +1,4 @@
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type CatalogSort = "name" | "price-asc" | "price-desc";
@@ -22,18 +22,43 @@ export type CatalogPageOptions = {
   limit?: number;
 };
 
+export type CatalogSkin = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  weaponId: string;
+  vpPriceOverride: number | null;
+  contentTier: { name: string; vpPrice: number; iconUrl: string };
+};
+
+type CatalogPageResult = { skins: CatalogSkin[]; nextCursor: CatalogCursor | null };
+
 // Filters, then sorts the ENTIRE matching set, then takes one page off the
 // front — in that order, in a single query. That ordering is what keeps
 // sorting and pagination from conflicting: every page is just a slice of
 // one already-fully-sorted result, never re-sorted per page.
-export async function getCatalogPage({
+//
+// "name" sort never needs a skin's price, so it stays on the plain Prisma
+// query builder. The price sorts need each skin's *resolved* price —
+// vpPriceOverride if set, else its content tier's price (see getSkinPrice
+// in src/lib/pricing.ts) — and Prisma's query builder has no syntax for
+// ordering by a computed COALESCE across a relation, so those two sorts
+// drop down to raw SQL instead (see getCatalogPageByPrice below).
+export async function getCatalogPage(options: CatalogPageOptions): Promise<CatalogPageResult> {
+  const { sort = "price-desc" } = options;
+  if (sort === "name") {
+    return getCatalogPageByName(options);
+  }
+  return getCatalogPageByPrice({ ...options, sort });
+}
+
+async function getCatalogPageByName({
   weaponId,
   tierName,
   search,
-  sort = "price-desc",
   cursor,
   limit = 24,
-}: CatalogPageOptions) {
+}: CatalogPageOptions): Promise<CatalogPageResult> {
   const filters: Prisma.SkinWhereInput[] = [];
   if (weaponId) filters.push({ weaponId });
   if (tierName) filters.push({ contentTier: { name: tierName } });
@@ -45,54 +70,17 @@ export async function getCatalogPage({
   // this exact row, in this exact order" — an OR of "strictly past the last
   // sort value" and "tied on sort value, but past the last id".
   if (cursor) {
-    if (sort === "name") {
-      filters.push({
-        OR: [
-          { name: { gt: cursor.sortValue as string } },
-          { AND: [{ name: cursor.sortValue as string }, { id: { gt: cursor.id } }] },
-        ],
-      });
-    } else if (sort === "price-asc") {
-      filters.push({
-        OR: [
-          { contentTier: { vpPrice: { gt: cursor.sortValue as number } } },
-          {
-            AND: [
-              { contentTier: { vpPrice: cursor.sortValue as number } },
-              { id: { gt: cursor.id } },
-            ],
-          },
-        ],
-      });
-    } else {
-      filters.push({
-        OR: [
-          { contentTier: { vpPrice: { lt: cursor.sortValue as number } } },
-          {
-            AND: [
-              { contentTier: { vpPrice: cursor.sortValue as number } },
-              { id: { gt: cursor.id } },
-            ],
-          },
-        ],
-      });
-    }
+    filters.push({
+      OR: [
+        { name: { gt: cursor.sortValue as string } },
+        { AND: [{ name: cursor.sortValue as string }, { id: { gt: cursor.id } }] },
+      ],
+    });
   }
-
-  // `id asc` is the tiebreaker for every sort mode — without it, rows that
-  // tie on the primary sort field (e.g. many skins sharing the same tier
-  // price) would have no stable relative order, and the cursor above
-  // wouldn't reliably know what "after this row" means.
-  const orderBy: Prisma.SkinOrderByWithRelationInput[] =
-    sort === "name"
-      ? [{ name: "asc" }, { id: "asc" }]
-      : sort === "price-asc"
-        ? [{ contentTier: { vpPrice: "asc" } }, { id: "asc" }]
-        : [{ contentTier: { vpPrice: "desc" } }, { id: "asc" }];
 
   const skins = await prisma.skin.findMany({
     where: filters.length ? { AND: filters } : undefined,
-    orderBy,
+    orderBy: [{ name: "asc" }, { id: "asc" }],
     take: limit,
     select: {
       id: true,
@@ -104,16 +92,100 @@ export async function getCatalogPage({
     },
   });
 
-  // A full page came back, so there's likely more — hand back the last
-  // row's sort value + id as the next cursor. A short page means we hit
-  // the end of the result set.
   let nextCursor: CatalogCursor | null = null;
   if (skins.length === limit) {
     const last = skins[skins.length - 1];
-    nextCursor = {
-      sortValue: sort === "name" ? last.name : last.contentTier.vpPrice,
-      id: last.id,
-    };
+    nextCursor = { sortValue: last.name, id: last.id };
+  }
+
+  return { skins, nextCursor };
+}
+
+// Escapes a search term for use inside a Postgres ILIKE pattern, so a user
+// typing "%" or "_" searches for that literal character instead of it being
+// treated as a wildcard.
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
+type RawCatalogRow = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  weaponId: string;
+  vpPriceOverride: number | null;
+  tierName: string;
+  tierVpPrice: number;
+  tierIconUrl: string;
+  effectivePrice: number;
+};
+
+async function getCatalogPageByPrice({
+  weaponId,
+  tierName,
+  search,
+  sort,
+  cursor,
+  limit = 24,
+}: CatalogPageOptions & { sort: "price-asc" | "price-desc" }): Promise<CatalogPageResult> {
+  // COALESCE(vpPriceOverride, tier price) — the same fallback getSkinPrice()
+  // applies in application code, expressed here as SQL so the database can
+  // sort and seek by it directly.
+  const priceExpr = Prisma.sql`COALESCE(s.vp_price_override, ct.vp_price)`;
+
+  const conditions: Prisma.Sql[] = [];
+  if (weaponId) conditions.push(Prisma.sql`s.weapon_id = ${weaponId}`);
+  if (tierName) conditions.push(Prisma.sql`ct.name = ${tierName}`);
+  if (search) {
+    conditions.push(Prisma.sql`s.name ILIKE ${"%" + escapeLikePattern(search) + "%"}`);
+  }
+  if (cursor) {
+    const compare = sort === "price-asc" ? Prisma.sql`>` : Prisma.sql`<`;
+    conditions.push(
+      Prisma.sql`(${priceExpr} ${compare} ${cursor.sortValue} OR (${priceExpr} = ${cursor.sortValue} AND s.id > ${cursor.id}))`
+    );
+  }
+  const whereClause = conditions.length
+    ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`
+    : Prisma.empty;
+
+  // `id asc` is the tiebreaker for every sort mode — without it, rows that
+  // tie on the primary sort field (e.g. many skins sharing the same price)
+  // would have no stable relative order, and the cursor above wouldn't
+  // reliably know what "after this row" means.
+  const orderDirection = sort === "price-asc" ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+
+  const rows = await prisma.$queryRaw<RawCatalogRow[]>(Prisma.sql`
+    SELECT
+      s.id,
+      s.name,
+      s.image_url AS "imageUrl",
+      s.weapon_id AS "weaponId",
+      s.vp_price_override AS "vpPriceOverride",
+      ct.name AS "tierName",
+      ct.vp_price AS "tierVpPrice",
+      ct.icon_url AS "tierIconUrl",
+      ${priceExpr} AS "effectivePrice"
+    FROM skins s
+    JOIN content_tiers ct ON s.content_tier_id = ct.id
+    ${whereClause}
+    ORDER BY ${priceExpr} ${orderDirection}, s.id ASC
+    LIMIT ${limit}
+  `);
+
+  const skins: CatalogSkin[] = rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    imageUrl: r.imageUrl,
+    weaponId: r.weaponId,
+    vpPriceOverride: r.vpPriceOverride,
+    contentTier: { name: r.tierName, vpPrice: r.tierVpPrice, iconUrl: r.tierIconUrl },
+  }));
+
+  let nextCursor: CatalogCursor | null = null;
+  if (rows.length === limit) {
+    const last = rows[rows.length - 1];
+    nextCursor = { sortValue: last.effectivePrice, id: last.id };
   }
 
   return { skins, nextCursor };
