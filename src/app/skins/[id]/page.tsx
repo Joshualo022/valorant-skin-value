@@ -10,6 +10,7 @@ import { isVerifiedReviewer } from "@/lib/incentives";
 import { REVIEW_TAG_LABELS, type ReviewTagValue } from "@/lib/review-tags";
 import { ReviewSection } from "./review-section";
 import { SkinImage } from "./skin-image";
+import { SkinLikeButton } from "./skin-like-button";
 
 export default async function SkinDetailPage({
   params,
@@ -33,8 +34,9 @@ export default async function SkinDetailPage({
 
   let ownsSkin = false;
   let existingReview = null;
+  let isLikedByViewer = false;
   if (user) {
-    const [owned, review] = await Promise.all([
+    const [owned, review, liked] = await Promise.all([
       prisma.userOwnedSkin.findUnique({
         where: { userId_skinId: { userId: user.id, skinId: id } },
       }),
@@ -42,9 +44,13 @@ export default async function SkinDetailPage({
         where: { userId_skinId: { userId: user.id, skinId: id } },
         include: { tags: true },
       }),
+      prisma.wishlist.findUnique({
+        where: { userId_skinId: { userId: user.id, skinId: id } },
+      }),
     ]);
     ownsSkin = !!owned;
     existingReview = review;
+    isLikedByViewer = !!liked;
   }
 
   const tier = getTierStyle(skin.contentTier.name);
@@ -66,7 +72,15 @@ export default async function SkinDetailPage({
           gradient={tier.gradient}
         />
         <div className="flex flex-col gap-2">
-          <h1 className="font-display text-2xl font-bold">{skin.name}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-2xl font-bold">{skin.name}</h1>
+            <SkinLikeButton
+              skinId={id}
+              initialLiked={isLikedByViewer}
+              initialCount={wishlistCount}
+              isLoggedIn={!!user}
+            />
+          </div>
           <div className="text-sm text-zinc-400">
             {skin.weapon.name}
             {skin.skinLine ? ` · ${skin.skinLine.name}` : ""}
@@ -89,7 +103,7 @@ export default async function SkinDetailPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 rounded-2xl border border-border-subtle bg-surface p-4 text-center">
+      <div className="grid grid-cols-3 gap-4 rounded-2xl border border-border-subtle bg-surface p-4 text-center">
         <div>
           <div className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
             {avgQualityScore ? avgQualityScore.toFixed(1) : "—"}
@@ -107,12 +121,6 @@ export default async function SkinDetailPage({
             {wouldRebuyPercent !== null ? `${wouldRebuyPercent}%` : "—"}
           </div>
           <div className="text-xs text-zinc-400">Would Rebuy</div>
-        </div>
-        <div>
-          <div className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
-            {wishlistCount}
-          </div>
-          <div className="text-xs text-zinc-400">Wishlisted</div>
         </div>
       </div>
       <div className="text-center text-xs text-zinc-500">

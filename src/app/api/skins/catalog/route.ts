@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
 import { getCatalogPage, type CatalogCursor, type CatalogSort } from "@/lib/catalog";
 
 const SORT_OPTIONS: CatalogSort[] = ["name", "price-asc", "price-desc"];
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
     ? (sortParam as CatalogSort)
     : "price-desc";
   const cursor = parseCursor(searchParams.get("cursor"));
+  const user = await getCurrentUser();
 
   const { skins, nextCursor } = await getCatalogPage({
     weaponId,
@@ -39,6 +41,7 @@ export async function GET(request: Request) {
     sort,
     cursor,
     limit: 24,
+    viewerId: user?.id,
   });
 
   return NextResponse.json({

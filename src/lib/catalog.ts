@@ -20,9 +20,16 @@ export type CatalogPageOptions = {
   sort?: CatalogSort;
   cursor?: CatalogCursor | null;
   limit?: number;
+  // The logged-in viewer, if any — used only to resolve isLikedByViewer per
+  // skin. Undefined (not just omitted) for a logged-out request, so every
+  // skin correctly comes back not-liked rather than erroring.
+  viewerId?: string;
 };
 
-export type CatalogSkin = {
+// What the two page-fetch functions below produce before like data is
+// attached — kept separate from CatalogSkin so they don't need to know
+// anything about likes themselves.
+type CatalogSkinBase = {
   id: string;
   name: string;
   imageUrl: string;
@@ -31,7 +38,40 @@ export type CatalogSkin = {
   contentTier: { name: string; vpPrice: number; iconUrl: string };
 };
 
+export type CatalogSkin = CatalogSkinBase & {
+  likeCount: number;
+  isLikedByViewer: boolean;
+};
+
 type CatalogPageResult = { skins: CatalogSkin[]; nextCursor: CatalogCursor | null };
+
+// Attaches each skin's total like count and the viewer's own liked state in
+// two queries total — one aggregation across the whole page's skin ids, one
+// (skipped entirely if logged out) for the viewer's own likes among them —
+// rather than a query per skin.
+async function attachLikeData(
+  skins: CatalogSkinBase[],
+  viewerId: string | undefined
+): Promise<CatalogSkin[]> {
+  if (skins.length === 0) return [];
+  const skinIds = skins.map((s) => s.id);
+
+  const [likeCounts, viewerLikes] = await Promise.all([
+    prisma.wishlist.groupBy({ by: ["skinId"], where: { skinId: { in: skinIds } }, _count: true }),
+    viewerId
+      ? prisma.wishlist.findMany({ where: { userId: viewerId, skinId: { in: skinIds } }, select: { skinId: true } })
+      : Promise.resolve([]),
+  ]);
+
+  const likeCountBySkinId = new Map(likeCounts.map((g) => [g.skinId, g._count]));
+  const likedSkinIds = new Set(viewerLikes.map((w) => w.skinId));
+
+  return skins.map((skin) => ({
+    ...skin,
+    likeCount: likeCountBySkinId.get(skin.id) ?? 0,
+    isLikedByViewer: likedSkinIds.has(skin.id),
+  }));
+}
 
 // Filters, then sorts the ENTIRE matching set, then takes one page off the
 // front — in that order, in a single query. That ordering is what keeps
@@ -45,12 +85,14 @@ type CatalogPageResult = { skins: CatalogSkin[]; nextCursor: CatalogCursor | nul
 // ordering by a computed COALESCE across a relation, so those two sorts
 // drop down to raw SQL instead (see getCatalogPageByPrice below).
 export async function getCatalogPage(options: CatalogPageOptions): Promise<CatalogPageResult> {
-  const { sort = "price-desc" } = options;
-  if (sort === "name") {
-    return getCatalogPageByName(options);
-  }
-  return getCatalogPageByPrice({ ...options, sort });
+  const { sort = "price-desc", viewerId } = options;
+  const { skins, nextCursor } =
+    sort === "name" ? await getCatalogPageByName(options) : await getCatalogPageByPrice({ ...options, sort });
+
+  return { skins: await attachLikeData(skins, viewerId), nextCursor };
 }
+
+type CatalogBasePageResult = { skins: CatalogSkinBase[]; nextCursor: CatalogCursor | null };
 
 async function getCatalogPageByName({
   weaponId,
@@ -58,7 +100,7 @@ async function getCatalogPageByName({
   search,
   cursor,
   limit = 24,
-}: CatalogPageOptions): Promise<CatalogPageResult> {
+}: CatalogPageOptions): Promise<CatalogBasePageResult> {
   const filters: Prisma.SkinWhereInput[] = [];
   if (weaponId) filters.push({ weaponId });
   if (tierName) filters.push({ contentTier: { name: tierName } });
@@ -127,7 +169,7 @@ async function getCatalogPageByPrice({
   sort,
   cursor,
   limit = 24,
-}: CatalogPageOptions & { sort: "price-asc" | "price-desc" }): Promise<CatalogPageResult> {
+}: CatalogPageOptions & { sort: "price-asc" | "price-desc" }): Promise<CatalogBasePageResult> {
   // COALESCE(vpPriceOverride, tier price) — the same fallback getSkinPrice()
   // applies in application code, expressed here as SQL so the database can
   // sort and seek by it directly.
@@ -173,7 +215,7 @@ async function getCatalogPageByPrice({
     LIMIT ${limit}
   `);
 
-  const skins: CatalogSkin[] = rows.map((r) => ({
+  const skins: CatalogSkinBase[] = rows.map((r) => ({
     id: r.id,
     name: r.name,
     imageUrl: r.imageUrl,

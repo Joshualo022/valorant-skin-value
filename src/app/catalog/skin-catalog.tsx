@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
+import { HeartButton } from "@/components/heart-button";
 
 type SkinSummary = {
   id: string;
@@ -14,6 +15,8 @@ type SkinSummary = {
   weaponId: string;
   vpPriceOverride: number | null;
   contentTier: { name: string; vpPrice: number; iconUrl: string };
+  likeCount: number;
+  isLikedByViewer: boolean;
 };
 
 type Weapon = {
@@ -41,13 +44,11 @@ export function SkinCatalog({
   weapons,
   tiers,
   initialOwnedSkinIds,
-  initialWishlistedSkinIds,
   totalValue,
 }: {
   weapons: Weapon[];
   tiers: ContentTierOption[];
   initialOwnedSkinIds: string[];
-  initialWishlistedSkinIds: string[];
   totalValue: number;
 }) {
   const router = useRouter();
@@ -71,9 +72,6 @@ export function SkinCatalog({
   const requestedTierSlug = searchParams.get("tier");
 
   const [ownedSkinIds, setOwnedSkinIds] = useState(() => new Set(initialOwnedSkinIds));
-  const [wishlistedSkinIds, setWishlistedSkinIds] = useState(
-    () => new Set(initialWishlistedSkinIds)
-  );
   // null = "All Weapons" — the default landing state when arriving from the
   // home page or nav (no ?weapon= param). A specific weapon is only
   // pre-selected when the URL asked for one, e.g. the per-weapon "add skin"
@@ -94,7 +92,7 @@ export function SkinCatalog({
         : null
   );
   const [pendingOwnershipSkinId, setPendingOwnershipSkinId] = useState<string | null>(null);
-  const [pendingWishlistSkinId, setPendingWishlistSkinId] = useState<string | null>(null);
+  const [pendingLikeSkinId, setPendingLikeSkinId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Tracks the skin just marked owned so we can prompt "rate it?" right at
   // the moment of ownership — the highest-leverage nudge per SPEC.md's
@@ -260,24 +258,30 @@ export function SkinCatalog({
     }
   }
 
-  // Fully independent of toggleOwnership — a skin can be wishlisted, owned,
-  // both, or neither. Wishlisting carries no score/rating (see
-  // SPEC.md section 15): it's a separate "do I want this" signal, not a
-  // quality judgment, so it gets its own state and its own API route.
-  async function toggleWishlist(skinId: string) {
-    const isWishlisted = wishlistedSkinIds.has(skinId);
-    setPendingWishlistSkinId(skinId);
-    setErrorMessage(null);
+  // Fully independent of toggleOwnership — a skin can be liked, owned, both,
+  // or neither. Liking carries no score/rating (see SPEC.md section 15):
+  // it's a separate "do I want this" signal, not a quality judgment, so it
+  // gets its own state and its own API route (still /api/me/wishlist under
+  // the hood — the "like" framing is a UI reframe, not a schema change).
+  // State lives directly on each loaded skin (rather than a separate id Set,
+  // unlike ownership) since likeCount needs to move in lockstep with it.
+  async function toggleLike(skinId: string) {
+    const skin = loadedSkins.find((s) => s.id === skinId);
+    if (!skin) return;
+    const wasLiked = skin.isLikedByViewer;
 
-    setWishlistedSkinIds((prev) => {
-      const next = new Set(prev);
-      if (isWishlisted) next.delete(skinId);
-      else next.add(skinId);
-      return next;
-    });
+    setPendingLikeSkinId(skinId);
+    setErrorMessage(null);
+    setLoadedSkins((prev) =>
+      prev.map((s) =>
+        s.id === skinId
+          ? { ...s, isLikedByViewer: !wasLiked, likeCount: s.likeCount + (wasLiked ? -1 : 1) }
+          : s
+      )
+    );
 
     try {
-      const res = isWishlisted
+      const res = wasLiked
         ? await fetch(`/api/me/wishlist/${skinId}`, { method: "DELETE" })
         : await fetch("/api/me/wishlist", {
             method: "POST",
@@ -287,15 +291,16 @@ export function SkinCatalog({
 
       if (!res.ok) throw new Error("Request failed");
     } catch {
-      setWishlistedSkinIds((prev) => {
-        const next = new Set(prev);
-        if (isWishlisted) next.add(skinId);
-        else next.delete(skinId);
-        return next;
-      });
+      setLoadedSkins((prev) =>
+        prev.map((s) =>
+          s.id === skinId
+            ? { ...s, isLikedByViewer: wasLiked, likeCount: s.likeCount + (wasLiked ? 1 : -1) }
+            : s
+        )
+      );
       setErrorMessage("Something went wrong — please try again.");
     } finally {
-      setPendingWishlistSkinId(null);
+      setPendingLikeSkinId(null);
     }
   }
 
@@ -320,7 +325,7 @@ export function SkinCatalog({
             href="/wishlist"
             className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
           >
-            My wishlist →
+            My liked skins →
           </Link>
         </div>
       </div>
@@ -446,7 +451,6 @@ export function SkinCatalog({
               <div className="h-4 w-3/4 animate-pulse rounded-full bg-surface-2" />
               <div className="h-3 w-1/2 animate-pulse rounded-full bg-surface-2" />
               <div className="h-7 w-full animate-pulse rounded-full bg-surface-2" />
-              <div className="h-7 w-full animate-pulse rounded-full bg-surface-2" />
             </div>
           ))}
         </div>
@@ -461,7 +465,6 @@ export function SkinCatalog({
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {loadedSkins.map((skin) => {
               const owned = ownedSkinIds.has(skin.id);
-              const wishlisted = wishlistedSkinIds.has(skin.id);
               const tier = getTierStyle(skin.contentTier.name);
               return (
                 <div
@@ -472,8 +475,13 @@ export function SkinCatalog({
                       : "border-border-subtle hover:border-zinc-600"
                   }`}
                 >
-                  <Link href={`/skins/${skin.id}`} className="flex flex-col gap-2">
-                    <div className="relative h-20 w-full rounded-lg bg-surface-2">
+                  {/* The heart sits as a sibling of the Link (not nested
+                      inside it) so tapping it doesn't also trigger
+                      navigation — the click handler still calls
+                      preventDefault/stopPropagation as a second layer of
+                      protection, since this <div> isn't itself a link. */}
+                  <div className="relative h-20 w-full rounded-lg bg-surface-2">
+                    <Link href={`/skins/${skin.id}`}>
                       <Image
                         src={skin.imageUrl}
                         alt={skin.name}
@@ -481,7 +489,18 @@ export function SkinCatalog({
                         className="object-contain transition-transform group-hover:scale-105"
                         sizes="200px"
                       />
-                    </div>
+                    </Link>
+                    <HeartButton
+                      variant="overlay"
+                      liked={skin.isLikedByViewer}
+                      count={skin.likeCount}
+                      pending={pendingLikeSkinId === skin.id}
+                      isLoggedIn
+                      onToggle={() => toggleLike(skin.id)}
+                      className="absolute bottom-1 right-1"
+                    />
+                  </div>
+                  <Link href={`/skins/${skin.id}`} className="flex flex-col gap-2">
                     <div className="truncate text-sm font-medium hover:underline">
                       {skin.name}
                     </div>
@@ -499,30 +518,17 @@ export function SkinCatalog({
                       {getSkinPrice(skin).toLocaleString()} VP
                     </div>
                   </Link>
-                  <div className="flex flex-col gap-1.5">
-                    <button
-                      onClick={() => toggleOwnership(skin.id)}
-                      disabled={pendingOwnershipSkinId === skin.id}
-                      className={`cursor-pointer rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
-                        owned
-                          ? "bg-surface-2 text-zinc-300 hover:bg-red-500/10 hover:text-red-400"
-                          : "bg-gradient-to-r from-accent to-accent-strong text-white"
-                      }`}
-                    >
-                      {owned ? "Owned ✓ · tap to remove" : "+ Add to Collection"}
-                    </button>
-                    <button
-                      onClick={() => toggleWishlist(skin.id)}
-                      disabled={pendingWishlistSkinId === skin.id}
-                      className={`cursor-pointer rounded-full border px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
-                        wishlisted
-                          ? "border-transparent bg-accent/15 text-accent hover:bg-red-500/10 hover:text-red-400"
-                          : "border-border-subtle text-zinc-300 hover:border-accent/50 hover:text-accent"
-                      }`}
-                    >
-                      {wishlisted ? "♥ Wishlisted · tap to remove" : "♡ Wishlist"}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => toggleOwnership(skin.id)}
+                    disabled={pendingOwnershipSkinId === skin.id}
+                    className={`cursor-pointer rounded-full px-3 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 ${
+                      owned
+                        ? "bg-surface-2 text-zinc-300 hover:bg-red-500/10 hover:text-red-400"
+                        : "bg-gradient-to-r from-accent to-accent-strong text-white"
+                    }`}
+                  >
+                    {owned ? "Owned ✓ · tap to remove" : "+ Add to Collection"}
+                  </button>
                   {justOwnedSkinId === skin.id && (
                     <Link
                       href={`/skins/${skin.id}`}

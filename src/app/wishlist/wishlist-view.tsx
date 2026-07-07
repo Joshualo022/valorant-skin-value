@@ -5,30 +5,28 @@ import Image from "next/image";
 import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
+import { HeartButton } from "@/components/heart-button";
 
-export type WishlistedSkin = {
+export type LikedSkin = {
   skinId: string;
   name: string;
   imageUrl: string;
   weaponName: string;
   vpPriceOverride: number | null;
   contentTier: { name: string; vpPrice: number; iconUrl: string };
+  likeCount: number;
 };
 
-export function WishlistView({
-  wishlistedSkins,
-}: {
-  wishlistedSkins: WishlistedSkin[];
-}) {
-  const [skins, setSkins] = useState(wishlistedSkins);
+export function WishlistView({ likedSkins }: { likedSkins: LikedSkin[] }) {
+  const [skins, setSkins] = useState(likedSkins);
   const [pendingSkinId, setPendingSkinId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Removing here just calls the same DELETE the catalog's wishlist toggle
+  // Unliking here just calls the same DELETE the catalog's heart button
   // uses — this page and the catalog are two views over the same data, not
   // separate sources of truth (same relationship My Collection has to the
   // catalog's "owned" state).
-  async function removeFromWishlist(skinId: string) {
+  async function unlike(skinId: string) {
     const previous = skins;
     setPendingSkinId(skinId);
     setErrorMessage(null);
@@ -55,9 +53,9 @@ export function WishlistView({
             {skins.length}
           </div>
           <div className="flex flex-col">
-            <h1 className="font-display text-xl font-bold">My Wishlist</h1>
+            <h1 className="font-display text-xl font-bold">Liked Skins</h1>
             <span className="text-sm text-zinc-400">
-              {skins.length} skin{skins.length === 1 ? "" : "s"} wishlisted
+              {skins.length} skin{skins.length === 1 ? "" : "s"} liked
             </span>
           </div>
         </div>
@@ -87,7 +85,7 @@ export function WishlistView({
 
       {skins.length === 0 ? (
         <p className="text-sm text-zinc-500">
-          You haven&apos;t wishlisted any skins yet.{" "}
+          You haven&apos;t liked any skins yet.{" "}
           <Link href="/catalog" className="text-accent underline">
             Browse the catalog
           </Link>
@@ -129,13 +127,14 @@ export function WishlistView({
                     </span>
                   </div>
                 </Link>
-                <button
-                  onClick={() => removeFromWishlist(skin.skinId)}
-                  disabled={pendingSkinId === skin.skinId}
-                  className="cursor-pointer rounded-full bg-surface-2 px-3 py-1.5 text-center text-xs font-semibold text-zinc-300 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
-                >
-                  ♥ Wishlisted · tap to remove
-                </button>
+                <HeartButton
+                  liked
+                  count={skin.likeCount}
+                  pending={pendingSkinId === skin.skinId}
+                  isLoggedIn
+                  onToggle={() => unlike(skin.skinId)}
+                  className="w-full justify-center"
+                />
               </div>
             );
           })}

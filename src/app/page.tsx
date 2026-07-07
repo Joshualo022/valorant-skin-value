@@ -53,7 +53,7 @@ export default async function Home() {
           <div className="flex flex-col gap-0.5">
             <span className="font-display font-semibold text-foreground">Skin Catalog</span>
             <span className="text-sm text-zinc-400">
-              Browse every skin — add what you own, wishlist what you want.
+              Browse every skin — add what you own, like what you want.
             </span>
           </div>
         </Link>

@@ -97,13 +97,13 @@ export default async function RootLayout({
                   </Link>
                   <Link
                     href="/wishlist"
-                    aria-label="My Wishlist"
+                    aria-label="Liked Skins"
                     className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"
                   >
                     <span className="sm:hidden" aria-hidden="true">
                       ♥
                     </span>
-                    <span className="hidden sm:inline">Wishlist</span>
+                    <span className="hidden sm:inline">Liked</span>
                   </Link>
                   <span
                     title={user.email}

@@ -21,8 +21,21 @@ export async function getWishlistedSkinsWithValue(userId: string) {
   return { wishlistedSkins, totalValue };
 }
 
-// Powers the wishlist count shown on the skin detail page — a live
-// want-count, same mechanic as a like button.
+// Powers the like count shown on the skin detail page's heart button — a
+// live want-count, literally the same mechanic as a like button now.
 export async function getWishlistCount(skinId: string) {
   return prisma.wishlist.count({ where: { skinId } });
+}
+
+// Batch version for the /wishlist ("Liked") page's skin cards — one
+// aggregation query for every skin on the page instead of one count query
+// each. Same shape as src/lib/catalog.ts's attachLikeData.
+export async function getWishlistCounts(skinIds: string[]): Promise<Map<string, number>> {
+  if (skinIds.length === 0) return new Map();
+  const grouped = await prisma.wishlist.groupBy({
+    by: ["skinId"],
+    where: { skinId: { in: skinIds } },
+    _count: true,
+  });
+  return new Map(grouped.map((g) => [g.skinId, g._count]));
 }
