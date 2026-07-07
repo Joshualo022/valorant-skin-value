@@ -173,10 +173,28 @@ export function SkinCatalog({
   );
 
   // Any filter change resets to page 1 rather than appending — the old
-  // results no longer match what's being asked for.
-  useEffect(() => {
+  // results no longer match what's being asked for. The reset itself
+  // happens during render (comparing against the filter key applied last
+  // render) rather than in the effect below, so React can apply it in the
+  // same commit instead of rendering once with stale skins and only
+  // clearing them a tick later.
+  const filterKey = `${selectedWeaponId ?? ""}|${selectedTierName ?? ""}|${debouncedSearchQuery}|${sortBy}`;
+  const [appliedFilterKey, setAppliedFilterKey] = useState(filterKey);
+  if (filterKey !== appliedFilterKey) {
+    setAppliedFilterKey(filterKey);
     setLoadedSkins([]);
     setNextCursor(null);
+  }
+
+  useEffect(() => {
+    // fetchPage sets isLoadingInitial synchronously before its first await —
+    // the same "reset, then fetch" shape React's own docs use for
+    // data-fetching effects (see the useEffect reference page's "Fetching
+    // data with Effects" example, which calls setBio(null) synchronously
+    // for the same reason). The linter can't tell that apart from a
+    // genuinely unnecessary render, so it's disabled here rather than
+    // deferring the flag update just to satisfy the rule.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPage(null);
   }, [fetchPage]);
 

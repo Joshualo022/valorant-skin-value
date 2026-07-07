@@ -9,15 +9,16 @@ export default async function WishlistPage() {
     redirect("/login");
   }
 
-  const { wishlistedSkins, totalValue } = await getWishlistedSkinsWithValue(user.id);
+  const { wishlistedSkins } = await getWishlistedSkinsWithValue(user.id);
 
   const skins: WishlistedSkin[] = wishlistedSkins.map((entry) => ({
     skinId: entry.skin.id,
     name: entry.skin.name,
     imageUrl: entry.skin.imageUrl,
     weaponName: entry.skin.weapon.name,
+    vpPriceOverride: entry.skin.vpPriceOverride,
     contentTier: entry.skin.contentTier,
   }));
 
-  return <WishlistView wishlistedSkins={skins} totalValue={totalValue} />;
+  return <WishlistView wishlistedSkins={skins} />;
 }

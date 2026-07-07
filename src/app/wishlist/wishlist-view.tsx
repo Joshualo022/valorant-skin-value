@@ -4,21 +4,21 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
+import { getSkinPrice } from "@/lib/pricing";
 
 export type WishlistedSkin = {
   skinId: string;
   name: string;
   imageUrl: string;
   weaponName: string;
+  vpPriceOverride: number | null;
   contentTier: { name: string; vpPrice: number; iconUrl: string };
 };
 
 export function WishlistView({
   wishlistedSkins,
-  totalValue,
 }: {
   wishlistedSkins: WishlistedSkin[];
-  totalValue: number;
 }) {
   const [skins, setSkins] = useState(wishlistedSkins);
   const [pendingSkinId, setPendingSkinId] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export function WishlistView({
     }
   }
 
-  const currentTotal = skins.reduce((sum, s) => sum + s.contentTier.vpPrice, 0);
+  const currentTotal = skins.reduce((sum, s) => sum + getSkinPrice(s), 0);
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-4 p-6">
@@ -125,7 +125,7 @@ export function WishlistView({
                       />
                     </div>
                     <span className={tier.text}>
-                      {skin.contentTier.vpPrice.toLocaleString()} VP
+                      {getSkinPrice(skin).toLocaleString()} VP
                     </span>
                   </div>
                 </Link>
