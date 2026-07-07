@@ -2,10 +2,11 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getOwnedSkinsWithValue, getCollectionProgress } from "@/lib/collection";
+import { getOwnedSkinsWithValue, getLoadoutValuation, getCollectionProgress } from "@/lib/collection";
 import { WEAPON_TYPE_LABELS, compareWeapons } from "@/lib/weapon-order";
 import { CollectionHeader } from "./collection-header";
-import { OwnedSkinsGrid, type FullOwnedSkin, type OwnedSkin, type WeaponGroup } from "./owned-skins-grid";
+import { OwnedSkinsGrid, type OwnedSkin, type WeaponGroup } from "./owned-skins-grid";
+import { toFullOwnedSkins } from "./all-owned-skins-grid";
 
 export default async function MyCollectionPage() {
   const user = await getCurrentUser();
@@ -20,16 +21,18 @@ export default async function MyCollectionPage() {
   const host = (await headers()).get("host");
   const origin = host ? `${host.startsWith("localhost") ? "http" : "https"}://${host}` : "";
 
-  const [weapons, { ownedSkins, totalValue, realisticValue }, activeLoadouts, { reviewedCount }] =
+  const [weapons, { ownedSkins, totalValue }, loadoutValuation, activeLoadouts, { reviewedCount }] =
     await Promise.all([
       prisma.weapon.findMany(),
       getOwnedSkinsWithValue(user.id),
+      getLoadoutValuation(user.id),
       prisma.activeLoadout.findMany({ where: { userId: user.id } }),
       getCollectionProgress(user.id),
     ]);
 
+  const allOwnedSkins = toFullOwnedSkins(ownedSkins);
+
   const ownedByWeaponId = new Map<string, OwnedSkin[]>();
-  const allOwnedSkins: FullOwnedSkin[] = [];
   for (const owned of ownedSkins) {
     const entry: OwnedSkin = {
       skinId: owned.skin.id,
@@ -41,7 +44,6 @@ export default async function MyCollectionPage() {
     const list = ownedByWeaponId.get(owned.skin.weaponId) ?? [];
     list.push(entry);
     ownedByWeaponId.set(owned.skin.weaponId, list);
-    allOwnedSkins.push({ ...entry, weaponName: owned.skin.weapon.name });
   }
 
   const activeSkinIdByWeaponId = new Map(activeLoadouts.map((a) => [a.weaponId, a.skinId]));
@@ -69,11 +71,13 @@ export default async function MyCollectionPage() {
       <CollectionHeader
         activeTab="owned"
         ownedCount={allOwnedSkins.length}
-        totalValue={totalValue}
-        realisticValue={realisticValue}
+        collectionValue={totalValue}
+        loadoutValuation={loadoutValuation}
         reviewedCount={reviewedCount}
         shareSlug={user.collectionShareSlug}
         origin={origin}
+        ownedSkinsForFlexItem={allOwnedSkins}
+        flexItemSkinId={user.flexItemSkinId}
       />
       <OwnedSkinsGrid weaponGroups={weaponGroups} allOwnedSkins={allOwnedSkins} />
     </div>

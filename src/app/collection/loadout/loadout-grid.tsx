@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import type { LoadoutSlot, LoadoutChroma } from "@/lib/loadout";
-import { LOADOUT_COLUMNS, LOADOUT_GROUP_LABELS } from "@/lib/weapon-order";
+import { LOADOUT_COLUMNS, LOADOUT_GROUP_LABELS, WEAPON_TYPE_LABELS } from "@/lib/weapon-order";
 
 // readOnly renders a static, non-interactive version — used on the public
 // /collection/:slug "flex" page, where visitors can look but not touch.
@@ -124,8 +125,8 @@ function WeaponSlotCard({
   const { weapon, skin, chroma, chromas } = slot;
 
   if (!skin) {
-    return (
-      <div className="relative flex h-20 w-full items-end overflow-hidden rounded-md border border-dashed border-slate-700/70 bg-slate-950/40 p-2">
+    const emptySlotContent = (
+      <>
         {weapon.killfeedIconUrl && (
           <Image
             src={weapon.killfeedIconUrl}
@@ -138,7 +139,30 @@ function WeaponSlotCard({
         <span className="relative z-10 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
           {weapon.name}
         </span>
-      </div>
+      </>
+    );
+
+    // Not clickable on the read-only public share page — there's nothing for
+    // a visitor to add, since it's not their collection.
+    if (readOnly) {
+      return (
+        <div className="relative flex h-20 w-full items-end overflow-hidden rounded-md border border-dashed border-slate-700/70 bg-slate-950/40 p-2">
+          {emptySlotContent}
+        </div>
+      );
+    }
+
+    const groupLabel = WEAPON_TYPE_LABELS[weapon.weaponType] ?? weapon.weaponType;
+    return (
+      <Link
+        href={`/collection#group-${groupLabel.toLowerCase()}`}
+        className="group relative flex h-20 w-full items-end overflow-hidden rounded-md border border-dashed border-slate-700/70 bg-slate-950/40 p-2 transition-colors hover:border-teal-500/60"
+      >
+        {emptySlotContent}
+        <span className="absolute inset-0 flex items-center justify-center bg-slate-950/60 text-[10px] font-semibold uppercase tracking-wide text-teal-300 opacity-0 transition-opacity group-hover:opacity-100">
+          + Add a skin
+        </span>
+      </Link>
     );
   }
 

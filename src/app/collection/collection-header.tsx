@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { isVerifiedReviewer } from "@/lib/incentives";
 import { SharePanel } from "./share-panel";
+import type { FullOwnedSkin } from "./all-owned-skins-grid";
 
 // Shared chrome for both /collection tabs — "All Owned" (the full list, with
 // per-weapon skin/chroma pickers) and "Loadout" (the in-game-style equipped
@@ -13,23 +14,27 @@ import { SharePanel } from "./share-panel";
 export function CollectionHeader({
   activeTab,
   ownedCount,
-  totalValue,
-  realisticValue,
+  collectionValue,
+  loadoutValuation,
   reviewedCount,
   shareSlug,
   origin,
+  ownedSkinsForFlexItem,
+  flexItemSkinId,
 }: {
   activeTab: "owned" | "loadout";
   ownedCount: number;
-  totalValue: number;
-  realisticValue: number;
+  collectionValue: number;
+  loadoutValuation: number;
   reviewedCount: number;
   shareSlug: string | null;
   origin: string;
+  ownedSkinsForFlexItem: FullOwnedSkin[];
+  flexItemSkinId: string | null;
 }) {
   const progressPercent = ownedCount > 0 ? Math.round((reviewedCount / ownedCount) * 100) : 0;
   const verified = isVerifiedReviewer(reviewedCount);
-  const [valueView, setValueView] = useState<"face" | "realistic">("face");
+  const [valueView, setValueView] = useState<"collection" | "loadout">("collection");
 
   return (
     <>
@@ -49,31 +54,32 @@ export function CollectionHeader({
           <div className="flex flex-col items-start gap-1.5 sm:items-end">
             <div className="flex gap-1 rounded-full border border-border-subtle bg-surface-2 p-0.5 text-xs">
               <button
-                onClick={() => setValueView("face")}
+                onClick={() => setValueView("collection")}
                 className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
-                  valueView === "face" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
+                  valueView === "collection" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
                 }`}
               >
-                Face Value
+                Collection Value
               </button>
               <button
-                onClick={() => setValueView("realistic")}
+                onClick={() => setValueView("loadout")}
                 className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
-                  valueView === "realistic" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
+                  valueView === "loadout" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
                 }`}
               >
-                Realistic Value
+                Loadout Valuation
               </button>
             </div>
             <div className="text-left text-lg font-medium sm:text-right">
               <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
-                {(valueView === "face" ? totalValue : realisticValue).toLocaleString()} VP
+                {(valueView === "collection" ? collectionValue : loadoutValuation).toLocaleString()} VP
               </span>
             </div>
-            {valueView === "realistic" && (
+            {valueView === "loadout" && (
               <p className="max-w-[240px] text-right text-[11px] leading-snug text-zinc-500">
-                Estimated from other owners&apos; value ratings, not exact — Select-tier weapon skins
-                count as 0 since many are earned free via the Battlepass rather than bought.
+                Estimated from other owners&apos; value ratings for skins in your active loadout —
+                Select-tier weapon skins count as 0 since many are earned free via the Battlepass
+                rather than bought.
               </p>
             )}
           </div>
@@ -105,7 +111,12 @@ export function CollectionHeader({
         </Link>
       </div>
 
-      <SharePanel initialSlug={shareSlug} origin={origin} />
+      <SharePanel
+        initialSlug={shareSlug}
+        origin={origin}
+        ownedSkins={ownedSkinsForFlexItem}
+        initialFlexItemSkinId={flexItemSkinId}
+      />
 
       <div className="flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
@@ -125,7 +136,17 @@ export function CollectionHeader({
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        <span className="text-xs text-zinc-500">{reviewedCount} verified reviews written</span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs text-zinc-500">{reviewedCount} verified reviews written</span>
+          {reviewedCount < ownedCount && (
+            <Link
+              href="/collection#all-owned"
+              className="shrink-0 rounded-full border border-accent/40 px-3 py-1 text-xs font-semibold text-accent transition-colors hover:bg-accent/10"
+            >
+              Review your skins →
+            </Link>
+          )}
+        </div>
       </div>
     </>
   );

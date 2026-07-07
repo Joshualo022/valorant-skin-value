@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
+import { AllOwnedSkinsGrid, type FullOwnedSkin } from "./all-owned-skins-grid";
 
 export type OwnedSkin = {
   skinId: string;
@@ -25,8 +26,6 @@ export type WeaponGroup = {
   label: string;
   weapons: WeaponSlot[];
 };
-
-export type FullOwnedSkin = OwnedSkin & { weaponName: string };
 
 export function OwnedSkinsGrid({
   weaponGroups,
@@ -233,57 +232,7 @@ export function OwnedSkinsGrid({
         ))}
       </div>
 
-      <div id="all-owned" className="flex scroll-mt-32 flex-col gap-2 border-t border-border-subtle pt-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          All Owned Skins ({allOwnedSkins.length})
-        </h2>
-        {allOwnedSkins.length === 0 ? (
-          <p className="text-sm text-zinc-500">
-            You haven&apos;t added any skins yet.{" "}
-            <Link href="/catalog" className="text-accent underline">
-              Browse the catalog
-            </Link>
-            .
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {allOwnedSkins.map((skin) => {
-              const tier = getTierStyle(skin.contentTier.name);
-              return (
-                <Link
-                  key={skin.skinId}
-                  href={`/skins/${skin.skinId}`}
-                  className={`group flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface p-3 transition-all hover:border-transparent ${tier.hoverRingGlow}`}
-                >
-                  <div className="relative h-20 w-full rounded-lg bg-surface-2">
-                    <Image
-                      src={skin.imageUrl}
-                      alt={skin.name}
-                      fill
-                      className="object-contain transition-transform group-hover:scale-105"
-                      sizes="200px"
-                    />
-                  </div>
-                  <div className="truncate text-sm font-medium">{skin.name}</div>
-                  <div className="text-xs text-zinc-400">{skin.weaponName}</div>
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-                    <div className="relative h-3.5 w-3.5 shrink-0">
-                      <Image
-                        src={skin.contentTier.iconUrl}
-                        alt={skin.contentTier.name}
-                        fill
-                        className="object-contain"
-                        sizes="14px"
-                      />
-                    </div>
-                    <span className={tier.text}>{getSkinPrice(skin).toLocaleString()} VP</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <AllOwnedSkinsGrid allOwnedSkins={allOwnedSkins} />
     </div>
   );
 }

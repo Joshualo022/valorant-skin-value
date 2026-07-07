@@ -21,12 +21,17 @@ model User {
   // not shared — the public /collection/:slug route 404s in that case, so
   // absence of a slug is what keeps an unshared collection inaccessible.
   collectionShareSlug String? @unique @map("collection_share_slug")
+  // User-chosen showcase skin for the public share page (see /api/me/flex-item).
+  // Deliberately a manual pick rather than a derived "rarest item" — the user
+  // decides what they're proud of, not just what cost the most.
+  flexItemSkinId String? @map("flex_item_skin_id")
 
   ownedSkins     UserOwnedSkin[]
   activeLoadouts ActiveLoadout[]
   reviews        Review[]
   flagsFiled     ReviewFlag[]    @relation("FlagsFiledByUser")
   wishlists      Wishlist[]
+  flexItemSkin   Skin?           @relation("FlexItem", fields: [flexItemSkinId], references: [id])
 
   @@map("users")
 }
@@ -87,6 +92,7 @@ model Skin {
   activeLoadouts ActiveLoadout[]
   reviews        Review[]
   wishlistedBy   Wishlist[]
+  flexItemOf     User[]          @relation("FlexItem")
 
   @@map("skins")
 }

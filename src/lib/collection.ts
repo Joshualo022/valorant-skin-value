@@ -3,34 +3,24 @@ import { getSkinPrice } from "@/lib/pricing";
 import { getAvgValueScoresExcludingUser } from "@/lib/reviews";
 import { getLoadoutSlots } from "@/lib/loadout";
 
-// A user's collection value is the sum of each owned skin's resolved VP
-// price (tier price, or the skin's own override) — the core aggregation the
-// whole app is built around. Alongside that "face value", also compute a
-// "realistic value": tier price scaled by what other owners actually think
+type PricedSkin = {
+  id: string;
+  vpPriceOverride: number | null;
+  contentTier: { vpPrice: number; name: string };
+  weapon: { weaponType: string };
+};
+
+// Shared math behind "loadout valuation" (and formerly the collection-wide
+// "realistic value"): tier price scaled by what other owners actually think
 // each skin is worth (see getAvgValueScoresExcludingUser), since a
 // widely-panned skin isn't really worth its sticker price to anyone. Skins
-// with no external reviews yet fall back to face value, since there's no
+// with no external reviews yet fall back to full tier price, since there's no
 // signal to scale by.
-export async function getOwnedSkinsWithValue(userId: string) {
-  const ownedSkins = await prisma.userOwnedSkin.findMany({
-    where: { userId },
-    include: {
-      skin: { include: { weapon: true, contentTier: true, skinLine: true } },
-      chroma: true,
-    },
-    orderBy: { addedAt: "desc" },
-  });
-
-  const totalValue = ownedSkins.reduce(
-    (sum, owned) => sum + getSkinPrice(owned.skin),
-    0
-  );
-
-  const skinIds = ownedSkins.map((owned) => owned.skin.id);
-  const avgValueScores = await getAvgValueScoresExcludingUser(skinIds, userId);
-
-  const realisticValue = ownedSkins.reduce((sum, owned) => {
-    const { skin } = owned;
+function valuateSkins(
+  skins: PricedSkin[],
+  avgValueScores: Map<string, { avgValueScore: number | null; reviewCount: number }>
+): number {
+  const total = skins.reduce((sum, skin) => {
     const tierPrice = getSkinPrice(skin);
 
     // Many Select-tier weapon skins are earned free via the Battlepass
@@ -49,7 +39,47 @@ export async function getOwnedSkinsWithValue(userId: string) {
     return sum + tierPrice * (external.avgValueScore / 10);
   }, 0);
 
-  return { ownedSkins, totalValue, realisticValue: Math.round(realisticValue) };
+  return Math.round(total);
+}
+
+// A user's collection value is the sum of each owned skin's resolved VP
+// price (tier price, or the skin's own override) — the core aggregation the
+// whole app is built around.
+export async function getOwnedSkinsWithValue(userId: string) {
+  const ownedSkins = await prisma.userOwnedSkin.findMany({
+    where: { userId },
+    include: {
+      skin: { include: { weapon: true, contentTier: true, skinLine: true } },
+      chroma: true,
+    },
+    orderBy: { addedAt: "desc" },
+  });
+
+  const totalValue = ownedSkins.reduce(
+    (sum, owned) => sum + getSkinPrice(owned.skin),
+    0
+  );
+
+  return { ownedSkins, totalValue };
+}
+
+// "Loadout valuation": the same realistic-value math as collection value, but
+// scoped to only the skins currently equipped in the active loadout, not the
+// whole owned collection — a read on what the loadout you actually play with
+// is worth, not everything sitting unused in the vault.
+export async function getLoadoutValuation(userId: string): Promise<number> {
+  const activeLoadouts = await prisma.activeLoadout.findMany({
+    where: { userId },
+    include: { skin: { include: { weapon: true, contentTier: true } } },
+  });
+
+  const skins = activeLoadouts.map((active) => active.skin);
+  const avgValueScores = await getAvgValueScoresExcludingUser(
+    skins.map((skin) => skin.id),
+    userId
+  );
+
+  return valuateSkins(skins, avgValueScores);
 }
 
 // "You've reviewed X of Y owned skins" — reviews require ownership (see
@@ -67,29 +97,24 @@ export async function getCollectionProgress(userId: string) {
 // collection (null slug) is simply unreachable through this path — no
 // separate access check needed.
 export async function getSharedCollectionBySlug(slug: string) {
-  const user = await prisma.user.findUnique({ where: { collectionShareSlug: slug } });
+  const user = await prisma.user.findUnique({
+    where: { collectionShareSlug: slug },
+    include: { flexItemSkin: { include: { weapon: true, contentTier: true } } },
+  });
   if (!user) return null;
 
-  const [{ ownedSkins, totalValue, realisticValue }, loadoutSlots] = await Promise.all([
+  const [{ ownedSkins, totalValue }, loadoutValuation, loadoutSlots] = await Promise.all([
     getOwnedSkinsWithValue(user.id),
+    getLoadoutValuation(user.id),
     getLoadoutSlots(user.id),
   ]);
-
-  // "Rarest item" proxy: the highest resolved VP price in the collection.
-  // A true rarity signal (e.g. a no-longer-purchasable Champions skin) would
-  // need an `availability_status` field the schema doesn't track yet — price
-  // is the closest thing we can derive from existing data (see section 17).
-  const rarestItem = ownedSkins.reduce<(typeof ownedSkins)[number] | null>((rarest, owned) => {
-    if (!rarest || getSkinPrice(owned.skin) > getSkinPrice(rarest.skin)) return owned;
-    return rarest;
-  }, null);
 
   return {
     displayName: user.displayName,
     loadoutSlots,
     collectionSize: ownedSkins.length,
     totalValue,
-    realisticValue,
-    rarestItem,
+    loadoutValuation,
+    flexItem: user.flexItemSkin,
   };
 }

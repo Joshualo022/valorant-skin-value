@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
-import { getOwnedSkinsWithValue, getCollectionProgress } from "@/lib/collection";
+import { getOwnedSkinsWithValue, getLoadoutValuation, getCollectionProgress } from "@/lib/collection";
 import { getLoadoutSlots } from "@/lib/loadout";
 import { CollectionHeader } from "../collection-header";
 import { LoadoutGrid } from "./loadout-grid";
+import { AllOwnedSkinsGrid, toFullOwnedSkins } from "../all-owned-skins-grid";
 
 export default async function CollectionLoadoutPage() {
   const user = await getCurrentUser();
@@ -15,28 +16,35 @@ export default async function CollectionLoadoutPage() {
   const host = (await headers()).get("host");
   const origin = host ? `${host.startsWith("localhost") ? "http" : "https"}://${host}` : "";
 
-  const [{ ownedSkins, totalValue, realisticValue }, { reviewedCount }, slots] = await Promise.all([
+  const [{ ownedSkins, totalValue }, loadoutValuation, { reviewedCount }, slots] = await Promise.all([
     getOwnedSkinsWithValue(user.id),
+    getLoadoutValuation(user.id),
     getCollectionProgress(user.id),
     getLoadoutSlots(user.id),
   ]);
+
+  const allOwnedSkins = toFullOwnedSkins(ownedSkins);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-6">
       <CollectionHeader
         activeTab="loadout"
         ownedCount={ownedSkins.length}
-        totalValue={totalValue}
-        realisticValue={realisticValue}
+        collectionValue={totalValue}
+        loadoutValuation={loadoutValuation}
         reviewedCount={reviewedCount}
         shareSlug={user.collectionShareSlug}
         origin={origin}
+        ownedSkinsForFlexItem={allOwnedSkins}
+        flexItemSkinId={user.flexItemSkinId}
       />
 
       <div className="rounded-2xl border border-teal-900/40 bg-[#0a1518] bg-[radial-gradient(circle_at_15%_10%,rgba(45,212,191,0.07),transparent_45%),radial-gradient(circle_at_85%_70%,rgba(20,90,100,0.1),transparent_50%)] p-4 sm:p-6">
         <p className="mb-4 text-xs text-teal-400/60">Click an equipped card to switch chromas.</p>
         <LoadoutGrid slots={slots} />
       </div>
+
+      <AllOwnedSkinsGrid allOwnedSkins={allOwnedSkins} />
     </div>
   );
 }
