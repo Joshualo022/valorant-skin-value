@@ -32,9 +32,12 @@ model User {
 }
 
 model Weapon {
-  id         String @id @default(uuid())
-  name       String @unique // "Vandal", "Phantom", etc.
-  weaponType String @map("weapon_type") // rifle, sidearm, smg, etc.
+  id              String  @id @default(uuid())
+  name            String  @unique // "Vandal", "Phantom", etc.
+  weaponType      String  @map("weapon_type") // rifle, sidearm, smg, etc.
+  // Killfeed icon from valorant-api.com, used as a fallback icon for empty
+  // loadout slots. Nullable in case a weapon's API response ever lacks one.
+  killfeedIconUrl String? @map("killfeed_icon_url")
 
   skins          Skin[]
   activeLoadouts ActiveLoadout[]
@@ -93,6 +96,10 @@ model Chroma {
   skinId   String @map("skin_id")
   name     String
   imageUrl String @map("image_url")
+  // The flat color-chip icon valorant-api.com calls "swatch", distinct from
+  // imageUrl's full weapon render — used for the small picker swatches.
+  // Nullable since some chromas (rare) lack one; fall back to imageUrl.
+  swatchUrl String? @map("swatch_url")
 
   skin           Skin            @relation(fields: [skinId], references: [id], onDelete: Cascade)
   ownedBy        UserOwnedSkin[]

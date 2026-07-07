@@ -1,13 +1,15 @@
-import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getLoadoutSlots } from "@/lib/loadout";
+import { LoadoutGrid } from "./loadout-grid";
 
-export async function GET() {
+export default async function LoadoutPage() {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    redirect("/login");
   }
 
   const slots = await getLoadoutSlots(user.id);
-  return NextResponse.json({ slots });
+
+  return <LoadoutGrid slots={slots} />;
 }

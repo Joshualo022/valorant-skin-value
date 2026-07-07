@@ -27,6 +27,7 @@ interface ApiChroma {
   displayName: string;
   displayIcon: string | null;
   fullRender: string | null;
+  swatch: string | null;
 }
 
 interface ApiSkin {
@@ -42,6 +43,7 @@ interface ApiWeapon {
   uuid: string;
   displayName: string;
   category: string;
+  killfeedIcon: string | null;
   skins: ApiSkin[];
 }
 
@@ -103,10 +105,14 @@ async function main() {
   for (const weapon of weapons) {
     const row = await prisma.weapon.upsert({
       where: { name: weapon.displayName },
-      update: { weaponType: weaponTypeFromCategory(weapon.category) },
+      update: {
+        weaponType: weaponTypeFromCategory(weapon.category),
+        killfeedIconUrl: weapon.killfeedIcon,
+      },
       create: {
         name: weapon.displayName,
         weaponType: weaponTypeFromCategory(weapon.category),
+        killfeedIconUrl: weapon.killfeedIcon,
       },
     });
     weaponIdByRiotUuid.set(weapon.uuid, row.id);
@@ -169,8 +175,13 @@ async function main() {
         const chromaName = cleanName(chroma.displayName);
         await prisma.chroma.upsert({
           where: { skinId_name: { skinId: skinRow.id, name: chromaName } },
-          update: { imageUrl: chromaImageUrl },
-          create: { skinId: skinRow.id, name: chromaName, imageUrl: chromaImageUrl },
+          update: { imageUrl: chromaImageUrl, swatchUrl: chroma.swatch },
+          create: {
+            skinId: skinRow.id,
+            name: chromaName,
+            imageUrl: chromaImageUrl,
+            swatchUrl: chroma.swatch,
+          },
         });
         chromaCount++;
       }
