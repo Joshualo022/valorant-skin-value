@@ -32,6 +32,27 @@ export async function getSkinWithAggregateScores(skinId: string) {
   };
 }
 
+// Per-skin average value score, excluding one viewer's own review — the
+// building block for "realistic value" (see src/lib/collection.ts). Grouped
+// in a single query rather than one aggregate per owned skin, and excluding
+// the viewer is the whole point: letting a user's own score count would let
+// them inflate their own collection's valuation, the same self-serving bias
+// this site exists to correct.
+export async function getAvgValueScoresExcludingUser(skinIds: string[], userId: string) {
+  if (skinIds.length === 0) return new Map<string, { avgValueScore: number | null; reviewCount: number }>();
+
+  const grouped = await prisma.review.groupBy({
+    by: ["skinId"],
+    where: { skinId: { in: skinIds }, NOT: { userId } },
+    _avg: { valueScore: true },
+    _count: true,
+  });
+
+  return new Map(
+    grouped.map((g) => [g.skinId, { avgValueScore: g._avg.valueScore, reviewCount: g._count }])
+  );
+}
+
 export async function getReviewsForSkin(skinId: string) {
   // _count.reviews is the reviewer's total review count across every skin
   // (not just this one) — used to compute the "Verified Reviewer" badge

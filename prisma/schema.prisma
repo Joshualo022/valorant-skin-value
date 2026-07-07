@@ -17,6 +17,10 @@ model User {
   email       String   @unique
   displayName String   @map("display_name")
   createdAt   DateTime @default(now()) @map("created_at")
+  // Set only when the user opts in to sharing (see /api/me/share). Null means
+  // not shared — the public /collection/:slug route 404s in that case, so
+  // absence of a slug is what keeps an unshared collection inaccessible.
+  collectionShareSlug String? @unique @map("collection_share_slug")
 
   ownedSkins     UserOwnedSkin[]
   activeLoadouts ActiveLoadout[]

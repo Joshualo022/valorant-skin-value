@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
 import { isVerifiedReviewer } from "@/lib/incentives";
 import { getSkinPrice } from "@/lib/pricing";
+import { SharePanel } from "./share-panel";
 
 export type OwnedSkin = {
   skinId: string;
@@ -32,17 +33,24 @@ export type FullOwnedSkin = OwnedSkin & { weaponName: string };
 export function LoadoutView({
   weaponGroups,
   totalValue,
+  realisticValue,
   allOwnedSkins,
   reviewedCount,
+  shareSlug,
+  origin,
 }: {
   weaponGroups: WeaponGroup[];
   totalValue: number;
+  realisticValue: number;
   allOwnedSkins: FullOwnedSkin[];
   reviewedCount: number;
+  shareSlug: string | null;
+  origin: string;
 }) {
   const ownedCount = allOwnedSkins.length;
   const progressPercent = ownedCount > 0 ? Math.round((reviewedCount / ownedCount) * 100) : 0;
   const verified = isVerifiedReviewer(reviewedCount);
+  const [valueView, setValueView] = useState<"face" | "realistic">("face");
   const [activeSkinIdByWeaponId, setActiveSkinIdByWeaponId] = useState<
     Record<string, string | null>
   >(() =>
@@ -107,11 +115,36 @@ export function LoadoutView({
           </div>
         </div>
         <div className="flex flex-col items-start gap-3 sm:items-end">
-          <div className="text-left text-lg font-medium sm:text-right">
-            <div className="text-xs uppercase tracking-wide text-zinc-500">Total value</div>
-            <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
-              {totalValue.toLocaleString()} VP
-            </span>
+          <div className="flex flex-col items-start gap-1.5 sm:items-end">
+            <div className="flex gap-1 rounded-full border border-border-subtle bg-surface-2 p-0.5 text-xs">
+              <button
+                onClick={() => setValueView("face")}
+                className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
+                  valueView === "face" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
+                }`}
+              >
+                Face Value
+              </button>
+              <button
+                onClick={() => setValueView("realistic")}
+                className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
+                  valueView === "realistic" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
+                }`}
+              >
+                Realistic Value
+              </button>
+            </div>
+            <div className="text-left text-lg font-medium sm:text-right">
+              <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
+                {(valueView === "face" ? totalValue : realisticValue).toLocaleString()} VP
+              </span>
+            </div>
+            {valueView === "realistic" && (
+              <p className="max-w-[240px] text-right text-[11px] leading-snug text-zinc-500">
+                Estimated from other owners&apos; value ratings, not exact — Select-tier weapon skins
+                count as 0 since many are earned free via the Battlepass rather than bought.
+              </p>
+            )}
           </div>
           <Link
             href="/catalog"
@@ -121,6 +154,8 @@ export function LoadoutView({
           </Link>
         </div>
       </div>
+
+      <SharePanel initialSlug={shareSlug} origin={origin} />
 
       <div className="flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">

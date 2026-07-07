@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getOwnedSkinsWithValue, getCollectionProgress } from "@/lib/collection";
@@ -11,7 +12,14 @@ export default async function MyCollectionPage() {
     redirect("/login");
   }
 
-  const [weapons, { ownedSkins, totalValue }, activeLoadouts, { reviewedCount }] =
+  // Building the absolute share link server-side (from the request's own
+  // Host header) rather than reading window.location.origin client-side —
+  // the server has no window, so branching render output on it would make
+  // the client's first render disagree with the server-rendered HTML.
+  const host = (await headers()).get("host");
+  const origin = host ? `${host.startsWith("localhost") ? "http" : "https"}://${host}` : "";
+
+  const [weapons, { ownedSkins, totalValue, realisticValue }, activeLoadouts, { reviewedCount }] =
     await Promise.all([
       prisma.weapon.findMany(),
       getOwnedSkinsWithValue(user.id),
@@ -59,8 +67,11 @@ export default async function MyCollectionPage() {
     <LoadoutView
       weaponGroups={weaponGroups}
       totalValue={totalValue}
+      realisticValue={realisticValue}
       allOwnedSkins={allOwnedSkins}
       reviewedCount={reviewedCount}
+      shareSlug={user.collectionShareSlug}
+      origin={origin}
     />
   );
 }
