@@ -29,3 +29,19 @@ CS student with a background in C/systems programming, linear algebra, and multi
 ## Timeline
 
 Working toward a v1 launch in about a month. Prioritize getting things working end-to-end over polish — refine later.
+
+## Current status (as of 2026-07-06)
+
+The v1 feature set from SPEC.md is built end-to-end and **live in production** at https://www.myradianite.com (custom domain connected, SSL auto-issued by Vercel, apex redirects to `www` as canonical via `next.config.ts`). Deployed on Vercel with GitHub auto-deploy on push to `main`.
+
+Built and deployed:
+- Auth (Supabase), collection ownership, reviews (with tags, score aggregation), skin detail pages.
+- **Skin Catalog**: single persistent page (`/catalog`, renamed from "Collection Builder"), weapon + content-tier filters synced to URL query params (AND-combined, more rows can be added later without restructuring), server-side cursor/keyset pagination with infinite scroll (`src/lib/catalog.ts`, `src/app/api/skins/catalog/route.ts`).
+- **Wishlist**: separate from ownership (`Wishlist` Prisma model, `/api/me/wishlist`, `/wishlist` page, wishlist count + chroma swatches on skin detail).
+- **Row Level Security**: enabled on all 12 Supabase tables with policies (`supabase/migrations/20260706000000_enable_rls_policies.sql`), verified via cross-user isolation tests. Note: this protects the public Supabase REST API surface — the Next.js app itself connects via a `BYPASSRLS` role and is still governed entirely by its own `userId` checks in route handlers.
+- Favicon + header logo: a segmented-ring diamond mark (`src/app/icon.svg`, `src/app/layout.tsx`), reusing the tier ring-glow treatment from collection cards.
+
+Known follow-ups, not yet done:
+- **Supabase Auth Site URL** still needs a manual update in the Supabase dashboard (Authentication → URL Configuration) to include `https://www.myradianite.com` — until then, production email-confirmation links won't work correctly.
+- **Naming**: decided to keep "Valorant Skin Value" as the page title/wordmark for now (self-explanatory to new visitors); `myradianite.com` is just the domain for now. Revisit a full rebrand to "Radianite" closer to launch if wanted.
+- Remaining SPEC.md Week 4 items: seed real review/collection data, general polish, finalize README.

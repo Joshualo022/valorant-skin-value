@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_screenshot",
+      "Bash(npx tsc --noEmit *)",
+      "mcp__Claude_Preview__preview_console_logs",
+      "Bash(npx eslint *)",
+      "mcp__Claude_Preview__preview_snapshot",
+      "mcp__Claude_Preview__preview_logs",
+      "mcp__Claude_Preview__preview_list",
+      "mcp__Claude_Preview__preview_inspect",
+      "mcp__Zapier-MCP__list_enabled_zapier_actions",
+      "mcp__Claude_Preview__preview_resize",
+      "Bash(npx skills find *)",
+      "mcp__Claude_Preview__preview_network"
+    ]
+  }
+}
