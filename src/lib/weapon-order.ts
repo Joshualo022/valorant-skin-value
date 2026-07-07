@@ -78,8 +78,8 @@ export const LOADOUT_GROUP_LABELS: Record<string, string> = {
 };
 
 export const LOADOUT_COLUMNS: string[][] = [
-  ["sidearm", "shotgun"],
-  ["smg"],
+  ["sidearm"],
+  ["smg", "shotgun"],
   ["rifle", "melee"],
   ["sniper", "heavy"],
 ];

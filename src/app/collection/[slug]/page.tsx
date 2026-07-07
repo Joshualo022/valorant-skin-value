@@ -5,7 +5,7 @@ import Link from "next/link";
 import { getSharedCollectionBySlug } from "@/lib/collection";
 import { getSkinPrice } from "@/lib/pricing";
 import { getTierStyle } from "@/lib/tier-style";
-import { compareWeapons } from "@/lib/weapon-order";
+import { LoadoutGrid } from "../loadout/loadout-grid";
 
 export async function generateMetadata({
   params,
@@ -31,8 +31,8 @@ export default async function SharedCollectionPage({
   const shared = await getSharedCollectionBySlug(slug);
   if (!shared) notFound();
 
-  const { displayName, activeLoadouts, collectionSize, totalValue, realisticValue, rarestItem } = shared;
-  const sortedLoadout = [...activeLoadouts].sort((a, b) => compareWeapons(a.weapon, b.weapon));
+  const { displayName, loadoutSlots, collectionSize, totalValue, realisticValue, rarestItem } = shared;
+  const hasEquippedSkin = loadoutSlots.some((slot) => slot.skin);
   const rarestTier = rarestItem ? getTierStyle(rarestItem.skin.contentTier.name) : null;
 
   return (
@@ -88,32 +88,12 @@ export default async function SharedCollectionPage({
 
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Loadout</h2>
-        {sortedLoadout.length === 0 ? (
-          <p className="text-sm text-zinc-500">No active loadout set yet.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {sortedLoadout.map((slot) => {
-              const tier = getTierStyle(slot.skin.contentTier.name);
-              return (
-                <div
-                  key={slot.id}
-                  className={`flex flex-col items-center gap-1 rounded-2xl border border-border-subtle bg-surface p-3 text-center ${tier.ringGlow}`}
-                >
-                  <div className="relative h-16 w-full">
-                    <Image
-                      src={slot.skin.imageUrl}
-                      alt={slot.skin.name}
-                      fill
-                      className="object-contain"
-                      sizes="200px"
-                    />
-                  </div>
-                  <div className="text-xs text-zinc-400">{slot.weapon.name}</div>
-                  <div className="w-full truncate text-sm font-medium">{slot.skin.name}</div>
-                </div>
-              );
-            })}
+        {hasEquippedSkin ? (
+          <div className="rounded-2xl border border-teal-900/40 bg-[#0a1518] bg-[radial-gradient(circle_at_15%_10%,rgba(45,212,191,0.07),transparent_45%),radial-gradient(circle_at_85%_70%,rgba(20,90,100,0.1),transparent_50%)] p-4">
+            <LoadoutGrid slots={loadoutSlots} readOnly />
           </div>
+        ) : (
+          <p className="text-sm text-zinc-500">No active loadout set yet.</p>
         )}
       </div>
 

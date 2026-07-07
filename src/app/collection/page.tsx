@@ -4,7 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getOwnedSkinsWithValue, getCollectionProgress } from "@/lib/collection";
 import { WEAPON_TYPE_LABELS, compareWeapons } from "@/lib/weapon-order";
-import { LoadoutView, type FullOwnedSkin, type OwnedSkin, type WeaponGroup } from "./loadout-view";
+import { CollectionHeader } from "./collection-header";
+import { OwnedSkinsGrid, type FullOwnedSkin, type OwnedSkin, type WeaponGroup } from "./owned-skins-grid";
 
 export default async function MyCollectionPage() {
   const user = await getCurrentUser();
@@ -64,14 +65,17 @@ export default async function MyCollectionPage() {
   }
 
   return (
-    <LoadoutView
-      weaponGroups={weaponGroups}
-      totalValue={totalValue}
-      realisticValue={realisticValue}
-      allOwnedSkins={allOwnedSkins}
-      reviewedCount={reviewedCount}
-      shareSlug={user.collectionShareSlug}
-      origin={origin}
-    />
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-6">
+      <CollectionHeader
+        activeTab="owned"
+        ownedCount={allOwnedSkins.length}
+        totalValue={totalValue}
+        realisticValue={realisticValue}
+        reviewedCount={reviewedCount}
+        shareSlug={user.collectionShareSlug}
+        origin={origin}
+      />
+      <OwnedSkinsGrid weaponGroups={weaponGroups} allOwnedSkins={allOwnedSkins} />
+    </div>
   );
 }

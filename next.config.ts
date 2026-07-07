@@ -19,6 +19,14 @@ const nextConfig: NextConfig = {
         destination: "https://www.myradianite.com/:path*",
         permanent: true,
       },
+      // /loadout moved under /collection/loadout (it's a tab of the
+      // collection now, not its own top-level page) — not permanent in case
+      // this route shape changes again.
+      {
+        source: "/loadout",
+        destination: "/collection/loadout",
+        permanent: false,
+      },
     ];
   },
 };

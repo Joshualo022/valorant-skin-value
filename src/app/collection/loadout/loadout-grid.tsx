@@ -5,7 +5,9 @@ import Image from "next/image";
 import type { LoadoutSlot, LoadoutChroma } from "@/lib/loadout";
 import { LOADOUT_COLUMNS, LOADOUT_GROUP_LABELS } from "@/lib/weapon-order";
 
-export function LoadoutGrid({ slots: initialSlots }: { slots: LoadoutSlot[] }) {
+// readOnly renders a static, non-interactive version — used on the public
+// /collection/:slug "flex" page, where visitors can look but not touch.
+export function LoadoutGrid({ slots: initialSlots, readOnly = false }: { slots: LoadoutSlot[]; readOnly?: boolean }) {
   const [slots, setSlots] = useState(initialSlots);
   const [openWeaponId, setOpenWeaponId] = useState<string | null>(null);
   const [pendingWeaponId, setPendingWeaponId] = useState<string | null>(null);
@@ -56,55 +58,47 @@ export function LoadoutGrid({ slots: initialSlots }: { slots: LoadoutSlot[] }) {
   }
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-[#0a1518] bg-[radial-gradient(circle_at_15%_10%,rgba(45,212,191,0.07),transparent_45%),radial-gradient(circle_at_85%_70%,rgba(20,90,100,0.1),transparent_50%)] px-4 py-8 sm:px-8">
-      <div className="mx-auto max-w-6xl">
-        <h1 className="mb-1 font-display text-2xl font-bold uppercase tracking-widest text-teal-100">
-          Loadout
-        </h1>
-        <p className="mb-6 text-sm text-teal-400/60">
-          Your active loadout, one skin per weapon. Click an equipped card to switch chromas.
+    <div className="flex flex-col gap-4">
+      {errorMessage && (
+        <p role="alert" className="text-sm text-red-400">
+          {errorMessage}
         </p>
+      )}
 
-        {errorMessage && (
-          <p role="alert" className="mb-4 text-sm text-red-400">
-            {errorMessage}
-          </p>
-        )}
-
-        <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
-          {LOADOUT_COLUMNS.map((column, columnIndex) => (
-            <div key={columnIndex} className="flex flex-col gap-8">
-              {column.map((weaponType) => {
-                const groupSlots = slotsByType.get(weaponType) ?? [];
-                if (groupSlots.length === 0) return null;
-                return (
-                  <div key={weaponType} className="flex flex-col gap-2">
-                    <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-teal-300/90">
-                      {LOADOUT_GROUP_LABELS[weaponType] ?? weaponType}
-                    </h2>
-                    <div className="flex flex-col gap-2">
-                      {groupSlots.map((slot) => (
-                        <WeaponSlotCard
-                          key={slot.weapon.id}
-                          slot={slot}
-                          isOpen={openWeaponId === slot.weapon.id}
-                          isPending={pendingWeaponId === slot.weapon.id}
-                          cardRef={openWeaponId === slot.weapon.id ? openCardRef : undefined}
-                          onToggle={() =>
-                            setOpenWeaponId((prev) => (prev === slot.weapon.id ? null : slot.weapon.id))
-                          }
-                          onSelectChroma={(chroma) =>
-                            slot.skin && selectChroma(slot.weapon.id, slot.skin.id, chroma)
-                          }
-                        />
-                      ))}
-                    </div>
+      <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+        {LOADOUT_COLUMNS.map((column, columnIndex) => (
+          <div key={columnIndex} className="flex flex-col gap-8">
+            {column.map((weaponType) => {
+              const groupSlots = slotsByType.get(weaponType) ?? [];
+              if (groupSlots.length === 0) return null;
+              return (
+                <div key={weaponType} className="flex flex-col gap-2">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-teal-300/90">
+                    {LOADOUT_GROUP_LABELS[weaponType] ?? weaponType}
+                  </h2>
+                  <div className="flex flex-col gap-2">
+                    {groupSlots.map((slot) => (
+                      <WeaponSlotCard
+                        key={slot.weapon.id}
+                        slot={slot}
+                        readOnly={readOnly}
+                        isOpen={openWeaponId === slot.weapon.id}
+                        isPending={pendingWeaponId === slot.weapon.id}
+                        cardRef={openWeaponId === slot.weapon.id ? openCardRef : undefined}
+                        onToggle={() =>
+                          setOpenWeaponId((prev) => (prev === slot.weapon.id ? null : slot.weapon.id))
+                        }
+                        onSelectChroma={(chroma) =>
+                          slot.skin && selectChroma(slot.weapon.id, slot.skin.id, chroma)
+                        }
+                      />
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -112,6 +106,7 @@ export function LoadoutGrid({ slots: initialSlots }: { slots: LoadoutSlot[] }) {
 
 function WeaponSlotCard({
   slot,
+  readOnly,
   isOpen,
   isPending,
   cardRef,
@@ -119,6 +114,7 @@ function WeaponSlotCard({
   onSelectChroma,
 }: {
   slot: LoadoutSlot;
+  readOnly: boolean;
   isOpen: boolean;
   isPending: boolean;
   cardRef?: RefObject<HTMLDivElement | null>;
@@ -164,7 +160,7 @@ function WeaponSlotCard({
     </span>
   );
 
-  if (!hasChromas) {
+  if (readOnly || !hasChromas) {
     return (
       <div className="relative flex h-20 w-full items-end overflow-hidden rounded-md border border-teal-900/50 bg-slate-900/70 p-2">
         {cardImage}

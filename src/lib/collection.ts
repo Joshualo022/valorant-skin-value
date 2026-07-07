@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSkinPrice } from "@/lib/pricing";
 import { getAvgValueScoresExcludingUser } from "@/lib/reviews";
+import { getLoadoutSlots } from "@/lib/loadout";
 
 // A user's collection value is the sum of each owned skin's resolved VP
 // price (tier price, or the skin's own override) — the core aggregation the
@@ -69,12 +70,9 @@ export async function getSharedCollectionBySlug(slug: string) {
   const user = await prisma.user.findUnique({ where: { collectionShareSlug: slug } });
   if (!user) return null;
 
-  const [{ ownedSkins, totalValue, realisticValue }, activeLoadouts] = await Promise.all([
+  const [{ ownedSkins, totalValue, realisticValue }, loadoutSlots] = await Promise.all([
     getOwnedSkinsWithValue(user.id),
-    prisma.activeLoadout.findMany({
-      where: { userId: user.id },
-      include: { weapon: true, skin: { include: { contentTier: true } } },
-    }),
+    getLoadoutSlots(user.id),
   ]);
 
   // "Rarest item" proxy: the highest resolved VP price in the collection.
@@ -88,7 +86,7 @@ export async function getSharedCollectionBySlug(slug: string) {
 
   return {
     displayName: user.displayName,
-    activeLoadouts,
+    loadoutSlots,
     collectionSize: ownedSkins.length,
     totalValue,
     realisticValue,
