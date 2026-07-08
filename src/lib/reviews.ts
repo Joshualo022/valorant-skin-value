@@ -53,18 +53,33 @@ export async function getAvgValueScoresExcludingUser(skinIds: string[], userId: 
   );
 }
 
-export async function getReviewsForSkin(skinId: string) {
+// viewerId is optional (logged-out visitors still see like counts, just
+// never a filled-in heart). _count.likes gives every review's like count in
+// the same query via a SQL subquery — no per-review count call. The
+// conditional `likes` include does the same for "did *this* viewer like it":
+// filtered to viewerId's own row (at most one, thanks to the
+// @@unique([reviewId, userId]) constraint), so isLikedByViewer is just
+// "did that array come back non-empty."
+export async function getReviewsForSkin(skinId: string, viewerId?: string) {
   // _count.reviews is the reviewer's total review count across every skin
   // (not just this one) — used to compute the "Verified Reviewer" badge
   // without a separate query per reviewer.
-  return prisma.review.findMany({
+  const reviews = await prisma.review.findMany({
     where: { skinId },
     include: {
       user: { select: { displayName: true, email: true, _count: { select: { reviews: true } } } },
       tags: true,
+      _count: { select: { likes: true } },
+      likes: viewerId ? { where: { userId: viewerId }, select: { id: true } } : false,
     },
     orderBy: { createdAt: "desc" },
   });
+
+  return reviews.map(({ _count, likes, ...review }) => ({
+    ...review,
+    likeCount: _count.likes,
+    isLikedByViewer: viewerId ? likes.length > 0 : false,
+  }));
 }
 
 // Powers the home page's "recently reviewed" carousel. `distinct: ["skinId"]`

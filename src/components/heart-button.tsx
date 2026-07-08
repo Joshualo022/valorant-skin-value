@@ -42,6 +42,7 @@ export function HeartButton({
   onToggle,
   variant = "inline",
   className = "",
+  subject = "skin",
 }: {
   liked: boolean;
   count: number;
@@ -50,6 +51,9 @@ export function HeartButton({
   onToggle: () => void;
   variant?: "inline" | "overlay";
   className?: string;
+  // What's being liked — feeds the aria-label/title so it reads correctly
+  // wherever this button is reused (skin detail header, review cards, etc).
+  subject?: string;
 }) {
   const router = useRouter();
 
@@ -66,7 +70,7 @@ export function HeartButton({
     onToggle();
   }
 
-  const label = liked ? "Unlike this skin" : "Like this skin";
+  const label = liked ? `Unlike this ${subject}` : `Like this ${subject}`;
 
   if (variant === "overlay") {
     return (

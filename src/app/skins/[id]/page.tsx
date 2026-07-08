@@ -8,10 +8,10 @@ import { resolveDisplayName } from "@/lib/user";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
 import { isVerifiedReviewer } from "@/lib/incentives";
-import { REVIEW_TAG_LABELS, type ReviewTagValue } from "@/lib/review-tags";
 import { ReviewSection } from "./review-section";
 import { SkinImage } from "./skin-image";
 import { SkinLikeButton } from "./skin-like-button";
+import { ReviewList } from "./review-list";
 
 export default async function SkinDetailPage({
   params,
@@ -23,7 +23,7 @@ export default async function SkinDetailPage({
 
   const [result, reviews, wishlistCount] = await Promise.all([
     getSkinWithAggregateScores(id),
-    getReviewsForSkin(id),
+    getReviewsForSkin(id, user?.id),
     getWishlistCount(id),
   ]);
 
@@ -149,10 +149,10 @@ export default async function SkinDetailPage({
         }
       />
 
-      <div className="flex flex-col gap-3">
-        <h2 className="font-display text-lg font-bold">Reviews</h2>
-        {reviews.length === 0 ? (
-          ownsSkin && !existingReview ? (
+      {reviews.length === 0 ? (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-display text-lg font-bold">Reviews</h2>
+          {ownsSkin && !existingReview ? (
             <p className="text-sm text-zinc-400">
               You own this skin — be the first to review it.
             </p>
@@ -160,72 +160,27 @@ export default async function SkinDetailPage({
             <p className="text-sm text-zinc-500">
               No reviews yet. Reviews can only be written by owners.
             </p>
-          )
-        ) : (
-          reviews.map((review) => {
-            const reviewerName = resolveDisplayName(review.user);
-            return (
-            <div
-              key={review.id}
-              id={`review-${review.id}`}
-              className="flex scroll-mt-20 gap-3 rounded-2xl border border-border-subtle bg-surface p-4"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-sm font-bold text-white">
-                {reviewerName[0]?.toUpperCase() ?? "?"}
-              </div>
-              <div className="flex flex-1 flex-col gap-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-sm font-semibold">{reviewerName}</span>
-                    {isVerifiedReviewer(review.user._count.reviews) && (
-                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent">
-                        Verified Reviewer
-                      </span>
-                    )}
-                    {review.id === earliestReviewId && (
-                      <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                        First to review
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-zinc-500">
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-zinc-300">
-                    Quality {review.qualityScore}/10
-                  </span>
-                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-zinc-300">
-                    Value {review.valueScore}/10
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 ${
-                      review.wouldRebuy
-                        ? "bg-accent/15 text-accent"
-                        : "bg-surface-2 text-zinc-400"
-                    }`}
-                  >
-                    {review.wouldRebuy ? "Would rebuy" : "Would not rebuy"}
-                  </span>
-                  {review.tags.map((t) => (
-                    <span
-                      key={t.id}
-                      className="rounded-full bg-surface-2 px-2 py-0.5 capitalize text-zinc-400"
-                    >
-                      {REVIEW_TAG_LABELS[t.tag as ReviewTagValue]}
-                    </span>
-                  ))}
-                </div>
-                {review.reviewText && (
-                  <p className="text-sm text-zinc-300">{review.reviewText}</p>
-                )}
-              </div>
-            </div>
-            );
-          })
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <ReviewList
+          isLoggedIn={!!user}
+          reviews={reviews.map((review) => ({
+            id: review.id,
+            reviewerName: resolveDisplayName(review.user),
+            isVerifiedReviewer: isVerifiedReviewer(review.user._count.reviews),
+            isEarliestReview: review.id === earliestReviewId,
+            qualityScore: review.qualityScore,
+            valueScore: review.valueScore,
+            wouldRebuy: review.wouldRebuy,
+            reviewText: review.reviewText,
+            createdAtLabel: new Date(review.createdAt).toLocaleDateString(),
+            tags: review.tags,
+            likeCount: review.likeCount,
+            isLikedByViewer: review.isLikedByViewer,
+          }))}
+        />
+      )}
     </div>
   );
 }

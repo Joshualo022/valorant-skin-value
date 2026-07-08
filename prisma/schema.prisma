@@ -33,6 +33,7 @@ model User {
   reviews        Review[]
   flagsFiled     ReviewFlag[]    @relation("FlagsFiledByUser")
   wishlists      Wishlist[]
+  reviewLikes    ReviewLike[]
   flexItemSkin   Skin?           @relation("FlexItem", fields: [flexItemSkinId], references: [id])
 
   @@map("users")
@@ -184,9 +185,23 @@ model Review {
   skin  Skin         @relation(fields: [skinId], references: [id])
   flags ReviewFlag[]
   tags  ReviewTag[]
+  likes ReviewLike[]
 
   @@unique([userId, skinId])
   @@map("reviews")
+}
+
+model ReviewLike {
+  id        String   @id @default(uuid())
+  reviewId  String   @map("review_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@map("review_likes")
 }
 
 enum ReviewTagType {

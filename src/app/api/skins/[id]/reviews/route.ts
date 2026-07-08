@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
 import { getReviewsForSkin } from "@/lib/reviews";
 
 export async function GET(
@@ -6,6 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const reviews = await getReviewsForSkin(id);
+  const user = await getCurrentUser();
+  const reviews = await getReviewsForSkin(id, user?.id);
   return NextResponse.json({ reviews });
 }
