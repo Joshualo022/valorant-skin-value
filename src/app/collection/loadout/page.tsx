@@ -10,7 +10,8 @@ import {
 import { getLoadoutSlots } from "@/lib/loadout";
 import { CollectionHeader } from "../collection-header";
 import { LoadoutGrid } from "./loadout-grid";
-import { AllOwnedSkinsGrid, toFullOwnedSkins } from "../all-owned-skins-grid";
+import { AllOwnedSkinsGrid } from "../all-owned-skins-grid";
+import { toFullOwnedSkins } from "../owned-skins-utils";
 
 export default async function CollectionLoadoutPage() {
   const user = await getCurrentUser();

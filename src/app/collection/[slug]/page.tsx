@@ -31,7 +31,8 @@ export default async function SharedCollectionPage({
   const shared = await getSharedCollectionBySlug(slug);
   if (!shared) notFound();
 
-  const { displayName, loadoutSlots, collectionSize, totalValue, loadoutValuation, flexItem } = shared;
+  const { displayName, loadoutSlots, collectionSize, totalValue, loadoutValuation, flexItem, weaponGroups } =
+    shared;
   const hasEquippedSkin = loadoutSlots.some((slot) => slot.skin);
   const flexTier = flexItem ? getTierStyle(flexItem.contentTier.name) : null;
 
@@ -99,6 +100,49 @@ export default async function SharedCollectionPage({
           <p className="text-sm text-zinc-500">No active loadout set yet.</p>
         )}
       </div>
+
+      {weaponGroups.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Full Collection ({collectionSize})
+          </h2>
+          <div className="flex flex-col gap-4">
+            {weaponGroups.map((group) => (
+              <div key={group.label} className="flex flex-col gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
+                  {group.label}
+                </h3>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                  {group.skins.map((skin) => {
+                    const skinTier = getTierStyle(skin.contentTier.name);
+                    return (
+                      <Link
+                        key={skin.skinId}
+                        href={`/skins/${skin.skinId}`}
+                        className="flex flex-col gap-1 rounded-xl border border-border-subtle/60 bg-surface/60 p-2 transition-colors hover:border-zinc-600"
+                      >
+                        <div className="relative h-12 w-full rounded-md bg-surface-2">
+                          <Image
+                            src={skin.imageUrl}
+                            alt={skin.name}
+                            fill
+                            className="object-contain"
+                            sizes="120px"
+                          />
+                        </div>
+                        <div className="truncate text-xs font-medium">{skin.name}</div>
+                        <div className={`text-[10px] ${skinTier.text}`}>
+                          {getSkinPrice(skin).toLocaleString()} VP
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <p className="pt-2 text-center text-xs text-zinc-600">
         Made with{" "}

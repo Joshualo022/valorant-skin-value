@@ -126,8 +126,10 @@ export function ReviewSection({
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submittedReview, setSubmittedReview] = useState<SubmittedReviewSummary | null>(null);
+  const [removed, setRemoved] = useState(false);
+  const [removePending, setRemovePending] = useState(false);
 
-  const effectivelyOwnsSkin = ownsSkin || justAdded;
+  const effectivelyOwnsSkin = (ownsSkin || justAdded) && !removed;
   const canSubmit = qualityScore !== null && valueScore !== null && wouldRebuy !== null;
 
   // Closes the modal and, once the DOM has had a tick to reflect the
@@ -269,6 +271,29 @@ export function ReviewSection({
     }
   }
 
+  // De-emphasized on purpose (see the small text-link styling below) since
+  // this is a destructive action — a brief native confirm() stands in for a
+  // custom confirmation dialog, since no such pattern exists elsewhere in
+  // this codebase yet and this is the only place that currently needs one.
+  async function handleRemoveFromCollection() {
+    if (!window.confirm("Remove this skin from your collection?")) return;
+    setRemovePending(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch(`/api/me/collection/${skinId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Something went wrong");
+      setRemoved(true);
+      setJustAdded(false);
+      setIsEditing(false);
+      router.refresh();
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setRemovePending(false);
+    }
+  }
+
   if (!effectivelyOwnsSkin) {
     return (
       <div className="flex flex-col items-start gap-2">
@@ -374,16 +399,31 @@ export function ReviewSection({
     // collection & review" CTA above.
     const isFirstReview = reviewCount === 0 && !existingReview;
     return (
-      <button
-        onClick={() => setIsEditing(true)}
-        className={
-          isFirstReview
-            ? "cursor-pointer self-start rounded-full bg-gradient-to-r from-accent to-accent-strong px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_-6px_rgba(255,47,146,0.8)] transition-transform hover:scale-105"
-            : "cursor-pointer self-start rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-medium transition-colors hover:border-accent/50"
-        }
-      >
-        {existingReview ? "Edit your review" : isFirstReview ? "Write a Review" : "Write a review"}
-      </button>
+      <div className="flex flex-col items-start gap-2">
+        <button
+          onClick={() => setIsEditing(true)}
+          className={
+            isFirstReview
+              ? "cursor-pointer self-start rounded-full bg-gradient-to-r from-accent to-accent-strong px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_-6px_rgba(255,47,146,0.8)] transition-transform hover:scale-105"
+              : "cursor-pointer self-start rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-medium transition-colors hover:border-accent/50"
+          }
+        >
+          {existingReview ? "Edit your review" : isFirstReview ? "Write a Review" : "Write a review"}
+        </button>
+        <button
+          type="button"
+          onClick={handleRemoveFromCollection}
+          disabled={removePending}
+          className="cursor-pointer text-xs text-zinc-500 underline decoration-dotted underline-offset-2 transition-colors hover:text-red-400 disabled:opacity-50"
+        >
+          {removePending ? "Removing..." : "Remove from collection"}
+        </button>
+        {errorMessage && (
+          <p role="alert" className="text-sm text-red-500">
+            {errorMessage}
+          </p>
+        )}
+      </div>
     );
   }
 

@@ -3,6 +3,7 @@ import { getSkinPrice } from "@/lib/pricing";
 import { getAvgValueScoresExcludingUser } from "@/lib/reviews";
 import { getLoadoutSlots } from "@/lib/loadout";
 import { resolveDisplayName } from "@/lib/user";
+import { WEAPON_TYPE_LABELS, compareWeapons } from "@/lib/weapon-order";
 
 type PricedSkin = {
   id: string;
@@ -101,6 +102,20 @@ export async function getReviewedSkinIds(userId: string): Promise<Set<string>> {
   return new Set(reviews.map((r) => r.skinId));
 }
 
+export type SharedCollectionSkin = {
+  skinId: string;
+  name: string;
+  imageUrl: string;
+  vpPriceOverride: number | null;
+  contentTier: { name: string; vpPrice: number; iconUrl: string };
+  weaponName: string;
+};
+
+export type SharedCollectionWeaponGroup = {
+  label: string;
+  skins: SharedCollectionSkin[];
+};
+
 // Powers the public /collection/:slug "flex" view and its Open Graph image.
 // Looks up by the opt-in share slug rather than a user id, so an unshared
 // collection (null slug) is simply unreachable through this path — no
@@ -118,6 +133,33 @@ export async function getSharedCollectionBySlug(slug: string) {
     getLoadoutSlots(user.id),
   ]);
 
+  // Grouped by weapon type only (one level, not further split per individual
+  // weapon like the owner's own /collection page) for the public share
+  // page's read-only "Full Collection" section below the loadout grid.
+  // Sorting the flat list first with the same compareWeapons used elsewhere
+  // means pushing into groups in order naturally produces the right group
+  // order too, with no separate sort step needed for the groups themselves.
+  const sortedOwnedSkins = [...ownedSkins].sort((a, b) =>
+    compareWeapons(a.skin.weapon, b.skin.weapon)
+  );
+  const weaponGroups: SharedCollectionWeaponGroup[] = [];
+  for (const owned of sortedOwnedSkins) {
+    const label = WEAPON_TYPE_LABELS[owned.skin.weapon.weaponType] ?? owned.skin.weapon.weaponType;
+    let group = weaponGroups.find((g) => g.label === label);
+    if (!group) {
+      group = { label, skins: [] };
+      weaponGroups.push(group);
+    }
+    group.skins.push({
+      skinId: owned.skin.id,
+      name: owned.skin.name,
+      imageUrl: owned.skin.imageUrl,
+      vpPriceOverride: owned.skin.vpPriceOverride,
+      contentTier: owned.skin.contentTier,
+      weaponName: owned.skin.weapon.name,
+    });
+  }
+
   return {
     displayName: resolveDisplayName(user),
     loadoutSlots,
@@ -125,5 +167,6 @@ export async function getSharedCollectionBySlug(slug: string) {
     totalValue,
     loadoutValuation,
     flexItem: user.flexItemSkin,
+    weaponGroups,
   };
 }

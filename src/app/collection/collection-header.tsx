@@ -51,38 +51,40 @@ export function CollectionHeader({
           </div>
         </div>
         <div className="flex flex-col items-start gap-3 sm:items-end">
-          <div className="flex flex-col items-start gap-1.5 sm:items-end">
-            <div className="flex gap-1 rounded-full border border-border-subtle bg-surface-2 p-0.5 text-xs">
-              <button
-                onClick={() => setValueView("collection")}
-                className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
-                  valueView === "collection" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
-                }`}
-              >
-                Collection Value
-              </button>
-              <button
-                onClick={() => setValueView("loadout")}
-                className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
-                  valueView === "loadout" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
-                }`}
-              >
-                Loadout Valuation
-              </button>
+          {ownedCount > 0 && (
+            <div className="flex flex-col items-start gap-1.5 sm:items-end">
+              <div className="flex gap-1 rounded-full border border-border-subtle bg-surface-2 p-0.5 text-xs">
+                <button
+                  onClick={() => setValueView("collection")}
+                  className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
+                    valueView === "collection" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
+                  }`}
+                >
+                  Collection Value
+                </button>
+                <button
+                  onClick={() => setValueView("loadout")}
+                  className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
+                    valueView === "loadout" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
+                  }`}
+                >
+                  Loadout Valuation
+                </button>
+              </div>
+              <div className="text-left text-lg font-medium sm:text-right">
+                <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
+                  {(valueView === "collection" ? collectionValue : loadoutValuation).toLocaleString()} VP
+                </span>
+              </div>
+              {valueView === "loadout" && (
+                <p className="max-w-[240px] text-right text-[11px] leading-snug text-zinc-500">
+                  Estimated from other owners&apos; value ratings for skins in your active loadout —
+                  Select-tier weapon skins count as 0 since many are earned free via the Battlepass
+                  rather than bought.
+                </p>
+              )}
             </div>
-            <div className="text-left text-lg font-medium sm:text-right">
-              <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
-                {(valueView === "collection" ? collectionValue : loadoutValuation).toLocaleString()} VP
-              </span>
-            </div>
-            {valueView === "loadout" && (
-              <p className="max-w-[240px] text-right text-[11px] leading-snug text-zinc-500">
-                Estimated from other owners&apos; value ratings for skins in your active loadout —
-                Select-tier weapon skins count as 0 since many are earned free via the Battlepass
-                rather than bought.
-              </p>
-            )}
-          </div>
+          )}
           <Link
             href="/catalog"
             className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"

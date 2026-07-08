@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -11,7 +12,7 @@ import {
 import { WEAPON_TYPE_LABELS, compareWeapons } from "@/lib/weapon-order";
 import { CollectionHeader } from "./collection-header";
 import { OwnedSkinsGrid, type OwnedSkin, type WeaponGroup } from "./owned-skins-grid";
-import { toFullOwnedSkins } from "./all-owned-skins-grid";
+import { toFullOwnedSkins } from "./owned-skins-utils";
 
 export default async function MyCollectionPage() {
   const user = await getCurrentUser();
@@ -91,7 +92,22 @@ export default async function MyCollectionPage() {
         ownedSkinsForFlexItem={allOwnedSkins}
         flexItemSkinId={user.flexItemSkinId}
       />
-      <OwnedSkinsGrid weaponGroups={weaponGroups} allOwnedSkins={allOwnedSkins} />
+      {allOwnedSkins.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-border-subtle bg-surface py-16 text-center">
+          <p className="text-lg font-semibold">Your collection is empty</p>
+          <p className="max-w-sm text-sm text-zinc-400">
+            Browse the catalog and mark skins you own to start building your collection.
+          </p>
+          <Link
+            href="/catalog"
+            className="mt-2 cursor-pointer rounded-full bg-gradient-to-r from-accent to-accent-strong px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_-6px_rgba(255,47,146,0.8)] transition-transform hover:scale-105"
+          >
+            Browse Skins
+          </Link>
+        </div>
+      ) : (
+        <OwnedSkinsGrid weaponGroups={weaponGroups} allOwnedSkins={allOwnedSkins} />
+      )}
     </div>
   );
 }
