@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = { error?: string; message?: string } | undefined;
@@ -45,33 +44,6 @@ export async function signup(
   }
 
   redirect("/");
-}
-
-// Kicks off the Google OAuth flow. signInWithOAuth doesn't sign anyone in by
-// itself — it just asks Supabase to build the Google authorization URL (it
-// needs the Google Client ID/Secret configured in the Supabase dashboard,
-// not here). We hand that URL back to redirect(), which sends the browser's
-// *next* request to Google instead of back into our own app. See the
-// /auth/callback route for the other end of this round trip.
-export async function signInWithGoogle() {
-  const supabase = await createClient();
-
-  // Same absolute-URL construction as the collection share link (see
-  // src/app/collection/page.tsx) — Google will only redirect to an exact,
-  // pre-registered URL, so this can't be a relative path.
-  const host = (await headers()).get("host");
-  const origin = host ? `${host.startsWith("localhost") ? "http" : "https"}://${host}` : "";
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: `${origin}/auth/callback` },
-  });
-
-  if (error || !data.url) {
-    redirect("/login?error=oauth");
-  }
-
-  redirect(data.url);
 }
 
 export async function logout() {

@@ -1,20 +1,57 @@
-import { signInWithGoogle } from "@/app/actions/auth";
+"use client";
 
-// A plain <form action={...}> is enough here — same pattern as the "Log
-// out" button in layout.tsx. No client-side state to manage: the server
-// action either redirects to Google or (on error) back to /login, so there's
-// nothing for a "use client" component to track in between.
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+// Deliberately calls Supabase from the browser rather than a Server Action.
+// signInWithOAuth has to stash a one-time secret (the PKCE "code verifier")
+// in a cookie before sending the browser to Google — the /auth/callback
+// route needs that same secret back to prove the code Google returns is
+// legitimate. Setting that cookie and redirecting to a different origin
+// within a single server response is exactly the kind of round trip that
+// can silently drop the cookie (proxies, edge networks, etc.). Doing it
+// here instead means the cookie is written directly via document.cookie
+// and the browser navigates immediately after — no HTTP response in
+// between for it to get lost from.
 export function GoogleSignInButton() {
+  const [pending, setPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  async function handleClick() {
+    setPending(true);
+    setErrorMessage(null);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+
+    // On success, Supabase itself navigates the browser to Google — there's
+    // nothing left to do here. We only ever reach this line on failure.
+    if (error) {
+      setErrorMessage("Something went wrong — please try again.");
+      setPending(false);
+    }
+  }
+
   return (
-    <form action={signInWithGoogle}>
+    <div className="flex flex-col gap-2">
       <button
-        type="submit"
-        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-border-subtle bg-surface px-4 py-2.5 font-semibold text-foreground transition-colors hover:border-zinc-500"
+        type="button"
+        onClick={handleClick}
+        disabled={pending}
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-border-subtle bg-surface px-4 py-2.5 font-semibold text-foreground transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <GoogleLogo />
-        Continue with Google
+        {pending ? "Redirecting to Google..." : "Continue with Google"}
       </button>
-    </form>
+      {errorMessage && (
+        <p role="alert" className="text-sm text-red-500">
+          {errorMessage}
+        </p>
+      )}
+    </div>
   );
 }
 
