@@ -20,6 +20,8 @@ export async function getCurrentUser() {
   return prisma.user.upsert({
     where: { id },
     update: {},
-    create: { id, email, displayName: email.split("@")[0] },
+    // displayName starts null on purpose — that's what triggers the
+    // first-login "choose a display name" interstitial (see layout.tsx).
+    create: { id, email },
   });
 }

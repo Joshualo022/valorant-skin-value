@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSkinPrice } from "@/lib/pricing";
 import { getAvgValueScoresExcludingUser } from "@/lib/reviews";
 import { getLoadoutSlots } from "@/lib/loadout";
+import { resolveDisplayName } from "@/lib/user";
 
 type PricedSkin = {
   id: string;
@@ -118,7 +119,7 @@ export async function getSharedCollectionBySlug(slug: string) {
   ]);
 
   return {
-    displayName: user.displayName,
+    displayName: resolveDisplayName(user),
     loadoutSlots,
     collectionSize: ownedSkins.length,
     totalValue,

@@ -15,7 +15,9 @@ model User {
   // explicitly by the app, not generated here. See src/lib/auth.ts.
   id          String   @id
   email       String   @unique
-  displayName String   @map("display_name")
+  // Null until the user picks one on the first-login interstitial (or skips
+  // it, which sets it to the email-prefix fallback) — see src/lib/user.ts.
+  displayName String?  @map("display_name")
   createdAt   DateTime @default(now()) @map("created_at")
   // Set only when the user opts in to sharing (see /api/me/share). Null means
   // not shared — the public /collection/:slug route 404s in that case, so

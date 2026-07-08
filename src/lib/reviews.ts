@@ -60,7 +60,7 @@ export async function getReviewsForSkin(skinId: string) {
   return prisma.review.findMany({
     where: { skinId },
     include: {
-      user: { select: { displayName: true, _count: { select: { reviews: true } } } },
+      user: { select: { displayName: true, email: true, _count: { select: { reviews: true } } } },
       tags: true,
     },
     orderBy: { createdAt: "desc" },
@@ -78,7 +78,7 @@ export async function getRecentlyReviewedSkins(limit: number) {
     take: limit,
     include: {
       skin: { include: { weapon: true, contentTier: true } },
-      user: { select: { displayName: true } },
+      user: { select: { displayName: true, email: true } },
     },
   });
 }

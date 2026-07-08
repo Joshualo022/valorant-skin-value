@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
+import { resolveDisplayName } from "@/lib/user";
 
 const AUTO_ADVANCE_MS = 4500;
 
@@ -12,7 +13,7 @@ export type RecentReview = {
   qualityScore: number;
   valueScore: number;
   reviewText: string | null;
-  user: { displayName: string };
+  user: { displayName: string | null; email: string };
   skin: {
     id: string;
     name: string;
@@ -84,7 +85,7 @@ export function RecentlyReviewedCarousel({ reviews }: { reviews: RecentReview[] 
                   </div>
                   <div className="font-display text-lg font-bold">{review.skin.name}</div>
                   <p className="text-sm text-zinc-300">&ldquo;{quote}&rdquo;</p>
-                  <span className="text-xs text-zinc-500">— {review.user.displayName}</span>
+                  <span className="text-xs text-zinc-500">— {resolveDisplayName(review.user)}</span>
                 </div>
               </Link>
             );

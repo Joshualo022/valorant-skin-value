@@ -1,6 +1,7 @@
 context-for-claude/
 databasepassword
 __pycache__/
+daynotes*
 
 # Vercel
 .vercel

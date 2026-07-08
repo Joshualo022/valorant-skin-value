@@ -55,7 +55,7 @@ export function GoogleSignInButton() {
   );
 }
 
-function GoogleLogo() {
+export function GoogleLogo() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true">
       <path

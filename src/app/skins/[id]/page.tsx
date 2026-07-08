@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSkinWithAggregateScores, getReviewsForSkin } from "@/lib/reviews";
 import { getWishlistCount } from "@/lib/wishlist";
+import { resolveDisplayName } from "@/lib/user";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
 import { isVerifiedReviewer } from "@/lib/incentives";
@@ -159,18 +160,20 @@ export default async function SkinDetailPage({
             </p>
           )
         ) : (
-          reviews.map((review) => (
+          reviews.map((review) => {
+            const reviewerName = resolveDisplayName(review.user);
+            return (
             <div
               key={review.id}
               className="flex gap-3 rounded-2xl border border-border-subtle bg-surface p-4"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-sm font-bold text-white">
-                {review.user.displayName[0]?.toUpperCase() ?? "?"}
+                {reviewerName[0]?.toUpperCase() ?? "?"}
               </div>
               <div className="flex flex-1 flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-sm font-semibold">{review.user.displayName}</span>
+                    <span className="text-sm font-semibold">{reviewerName}</span>
                     {isVerifiedReviewer(review.user._count.reviews) && (
                       <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent">
                         Verified Reviewer
@@ -216,7 +219,8 @@ export default async function SkinDetailPage({
                 )}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

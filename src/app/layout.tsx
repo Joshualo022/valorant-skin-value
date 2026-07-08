@@ -3,7 +3,9 @@ import { Geist, Geist_Mono, Chakra_Petch } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { getCurrentUser } from "@/lib/auth";
-import { logout } from "@/app/actions/auth";
+import { resolveDisplayName } from "@/lib/user";
+import { DisplayNameInterstitial } from "@/components/display-name-interstitial";
+import { NavUserMenu } from "@/components/nav-user-menu";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,6 +43,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${chakraPetch.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background">
+        {user && !user.displayName && <DisplayNameInterstitial email={user.email} />}
         <header className="sticky top-0 z-20 h-14 border-b border-border-subtle/80 bg-background/85 backdrop-blur-md">
           <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-6">
             <Link href="/" className="flex items-center gap-2">
@@ -114,20 +117,7 @@ export default async function RootLayout({
                     </span>
                     <span className="hidden sm:inline">Liked</span>
                   </Link>
-                  <span
-                    title={user.email}
-                    className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white"
-                  >
-                    {user.email?.[0]?.toUpperCase() ?? "?"}
-                  </span>
-                  <form action={logout}>
-                    <button
-                      type="submit"
-                      className="cursor-pointer rounded-full px-3 py-1.5 font-medium text-zinc-400 transition-colors hover:bg-surface hover:text-foreground"
-                    >
-                      Log out
-                    </button>
-                  </form>
+                  <NavUserMenu displayName={resolveDisplayName(user)} email={user.email} />
                 </>
               ) : (
                 <>
