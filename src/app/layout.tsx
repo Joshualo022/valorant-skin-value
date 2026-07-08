@@ -140,11 +140,16 @@ export default async function RootLayout({
           </div>
         </header>
         {children}
-        <footer className="border-t border-border-subtle/80 px-6 py-4 text-center text-xs text-zinc-400">
-          Valorant Skin Value isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the
-          views or opinions of Riot Games or anyone officially involved in producing or
-          managing VALORANT. VALORANT and Riot Games are trademarks or registered
-          trademarks of Riot Games, Inc.
+        <footer className="flex flex-col items-center gap-2 border-t border-border-subtle/80 px-6 py-4 text-center text-xs text-zinc-400">
+          <p>
+            Valorant Skin Value isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the
+            views or opinions of Riot Games or anyone officially involved in producing or
+            managing VALORANT. VALORANT and Riot Games are trademarks or registered
+            trademarks of Riot Games, Inc.
+          </p>
+          <Link href="/privacy" className="underline hover:text-foreground">
+            Privacy Policy
+          </Link>
         </footer>
       </body>
     </html>
