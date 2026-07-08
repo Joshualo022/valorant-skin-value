@@ -24,7 +24,7 @@ const chakraPetch = Chakra_Petch({
 });
 
 export const metadata: Metadata = {
-  title: "Valorant Skin Value",
+  title: "MyRadianite — Valorant Skin Value",
   description: "Review skins you actually own, and value your collection.",
 };
 
@@ -74,8 +74,17 @@ export default async function RootLayout({
                 />
                 <path d="M12 7.5 15.75 12 12 16.5 8.25 12Z" fill="url(#logo-gradient)" />
               </svg>
+              {/* The full combined name is long enough to wrap onto a second
+                  line at in-between widths (e.g. a laptop window snapped to
+                  half-screen), which would overflow the header's fixed h-14
+                  — other pages' sticky sub-navs (e.g. the catalog filter
+                  bar) assume that exact height via `top-14`. Showing just
+                  "MyRadianite" in that band avoids the wrap; the full name
+                  still appears here at lg+ and unconditionally in the home
+                  page hero. */}
               <span className="hidden font-display text-lg font-bold tracking-tight text-foreground sm:inline">
-                Valorant Skin Value
+                <span className="lg:hidden">MyRadianite</span>
+                <span className="hidden lg:inline">MyRadianite Valorant Skin Value</span>
               </span>
             </Link>
             <nav className="flex items-center gap-1 text-sm sm:gap-2">

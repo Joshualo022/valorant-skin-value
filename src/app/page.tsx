@@ -19,6 +19,9 @@ export default async function Home() {
         />
 
         <div className="relative flex flex-col items-center gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+            MyRadianite Valorant Skin Value
+          </p>
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
             Was it worth the{" "}
             <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-transparent">
