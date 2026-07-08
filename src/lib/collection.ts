@@ -92,6 +92,14 @@ export async function getCollectionProgress(userId: string) {
   return { ownedCount, reviewedCount };
 }
 
+// The set of skin ids this user has already reviewed — one findMany, used to
+// tell "Write a Review" from "Edit Review" on the owned-skins list
+// (AllOwnedSkinsGrid) without a lookup per skin.
+export async function getReviewedSkinIds(userId: string): Promise<Set<string>> {
+  const reviews = await prisma.review.findMany({ where: { userId }, select: { skinId: true } });
+  return new Set(reviews.map((r) => r.skinId));
+}
+
 // Powers the public /collection/:slug "flex" view and its Open Graph image.
 // Looks up by the opt-in share slug rather than a user id, so an unshared
 // collection (null slug) is simply unreachable through this path — no

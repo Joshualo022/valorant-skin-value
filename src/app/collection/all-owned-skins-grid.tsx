@@ -10,11 +10,14 @@ export type FullOwnedSkin = {
   vpPriceOverride: number | null;
   contentTier: { name: string; vpPrice: number; iconUrl: string };
   weaponName: string;
+  isReviewed: boolean;
 };
 
 // Shape returned by getOwnedSkinsWithValue — kept loose (rather than the
 // Prisma payload type) so callers on both /collection and /collection/loadout
 // can build this list from the same query without extra includes.
+// `reviewedSkinIds` comes from getReviewedSkinIds — one query for the whole
+// list rather than a review lookup per skin.
 export function toFullOwnedSkins(
   ownedSkins: {
     skin: {
@@ -25,7 +28,8 @@ export function toFullOwnedSkins(
       contentTier: { name: string; vpPrice: number; iconUrl: string };
       weapon: { name: string };
     };
-  }[]
+  }[],
+  reviewedSkinIds: Set<string>
 ): FullOwnedSkin[] {
   return ownedSkins.map((owned) => ({
     skinId: owned.skin.id,
@@ -34,6 +38,7 @@ export function toFullOwnedSkins(
     vpPriceOverride: owned.skin.vpPriceOverride,
     contentTier: owned.skin.contentTier,
     weaponName: owned.skin.weapon.name,
+    isReviewed: reviewedSkinIds.has(owned.skin.id),
   }));
 }
 
@@ -88,7 +93,15 @@ export function AllOwnedSkinsGrid({ allOwnedSkins }: { allOwnedSkins: FullOwnedS
                   </div>
                   <span className={tier.text}>{getSkinPrice(skin).toLocaleString()} VP</span>
                 </div>
-                <div className="text-xs font-medium text-accent">Click to review →</div>
+                <div
+                  className={
+                    skin.isReviewed
+                      ? "rounded-full bg-surface-2 px-2.5 py-1 text-center text-xs font-medium text-zinc-400"
+                      : "rounded-full bg-gradient-to-r from-accent to-accent-strong px-2.5 py-1 text-center text-xs font-semibold text-white"
+                  }
+                >
+                  {skin.isReviewed ? "✓ Edit Review" : "Write a Review"}
+                </div>
               </Link>
             );
           })}

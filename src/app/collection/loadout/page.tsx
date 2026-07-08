@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
-import { getOwnedSkinsWithValue, getLoadoutValuation, getCollectionProgress } from "@/lib/collection";
+import {
+  getOwnedSkinsWithValue,
+  getLoadoutValuation,
+  getCollectionProgress,
+  getReviewedSkinIds,
+} from "@/lib/collection";
 import { getLoadoutSlots } from "@/lib/loadout";
 import { CollectionHeader } from "../collection-header";
 import { LoadoutGrid } from "./loadout-grid";
@@ -16,14 +21,16 @@ export default async function CollectionLoadoutPage() {
   const host = (await headers()).get("host");
   const origin = host ? `${host.startsWith("localhost") ? "http" : "https"}://${host}` : "";
 
-  const [{ ownedSkins, totalValue }, loadoutValuation, { reviewedCount }, slots] = await Promise.all([
-    getOwnedSkinsWithValue(user.id),
-    getLoadoutValuation(user.id),
-    getCollectionProgress(user.id),
-    getLoadoutSlots(user.id),
-  ]);
+  const [{ ownedSkins, totalValue }, loadoutValuation, { reviewedCount }, slots, reviewedSkinIds] =
+    await Promise.all([
+      getOwnedSkinsWithValue(user.id),
+      getLoadoutValuation(user.id),
+      getCollectionProgress(user.id),
+      getLoadoutSlots(user.id),
+      getReviewedSkinIds(user.id),
+    ]);
 
-  const allOwnedSkins = toFullOwnedSkins(ownedSkins);
+  const allOwnedSkins = toFullOwnedSkins(ownedSkins, reviewedSkinIds);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-6">

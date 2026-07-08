@@ -86,11 +86,18 @@ export function ReviewSection({
   isLoggedIn,
   ownsSkin,
   existingReview,
+  reviewCount,
 }: {
   skinId: string;
   isLoggedIn: boolean;
   ownsSkin: boolean;
   existingReview: ExistingReview | null;
+  // Used only to decide whether this viewer would be the skin's first
+  // reviewer — see the emphasized CTA below. The empty-state message itself
+  // (shown when the skin has zero reviews) lives in page.tsx, right below
+  // this component, since it needs to render even when this section is a
+  // login/ownership prompt instead of the actual form.
+  reviewCount: number;
 }) {
   const router = useRouter();
   const [justAdded, setJustAdded] = useState(false);
@@ -106,9 +113,23 @@ export function ReviewSection({
   const [reviewText, setReviewText] = useState(existingReview?.reviewText ?? "");
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [justSubmitted, setJustSubmitted] = useState(false);
 
   const effectivelyOwnsSkin = ownsSkin || justAdded;
   const canSubmit = qualityScore !== null && valueScore !== null && wouldRebuy !== null;
+
+  // A brief confirmation before handing off to the next unreviewed skin —
+  // shown in place of whatever this component would otherwise render, since
+  // the redirect that follows makes any of those states moot.
+  if (justSubmitted) {
+    return (
+      <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
+        <div className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30">
+          ✓ Review submitted
+        </div>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     return (
@@ -207,11 +228,13 @@ export function ReviewSection({
         throw new Error(body.error || "Something went wrong");
       }
 
-      setIsEditing(false);
-      router.refresh();
+      // Hold on the confirmation just long enough to read it, then hand off
+      // to the next owned-but-unreviewed skin — router.refresh() isn't
+      // needed here since we're navigating away from this page entirely.
+      setJustSubmitted(true);
+      setTimeout(() => router.push("/catalog?filter=unreviewed-owned"), 1200);
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
       setPending(false);
     }
   }
@@ -234,12 +257,20 @@ export function ReviewSection({
   }
 
   if (!isEditing) {
+    // Would be this skin's first-ever review — draw the eye to it rather
+    // than the usual low-key toggle, same treatment as the "Add to
+    // collection & review" CTA above.
+    const isFirstReview = reviewCount === 0 && !existingReview;
     return (
       <button
         onClick={() => setIsEditing(true)}
-        className="cursor-pointer self-start rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-medium transition-colors hover:border-accent/50"
+        className={
+          isFirstReview
+            ? "cursor-pointer self-start rounded-full bg-gradient-to-r from-accent to-accent-strong px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_-6px_rgba(255,47,146,0.8)] transition-transform hover:scale-105"
+            : "cursor-pointer self-start rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-medium transition-colors hover:border-accent/50"
+        }
       >
-        {existingReview ? "Edit your review" : "Write a review"}
+        {existingReview ? "Edit your review" : isFirstReview ? "Write a Review" : "Write a review"}
       </button>
     );
   }

@@ -131,6 +131,7 @@ export default async function SkinDetailPage({
         skinId={id}
         isLoggedIn={!!user}
         ownsSkin={ownsSkin}
+        reviewCount={reviewCount}
         existingReview={
           existingReview
             ? {
@@ -148,7 +149,15 @@ export default async function SkinDetailPage({
       <div className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-bold">Reviews</h2>
         {reviews.length === 0 ? (
-          <p className="text-sm text-zinc-500">No reviews yet.</p>
+          ownsSkin && !existingReview ? (
+            <p className="text-sm text-zinc-400">
+              You own this skin — be the first to review it.
+            </p>
+          ) : (
+            <p className="text-sm text-zinc-500">
+              No reviews yet. Reviews can only be written by owners.
+            </p>
+          )
         ) : (
           reviews.map((review) => (
             <div
