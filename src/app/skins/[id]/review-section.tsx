@@ -185,12 +185,13 @@ export function ReviewSection({
     );
   }
 
-  function toggleTag(leftValue: ReviewTagValue, rightValue: ReviewTagValue, picked: ReviewTagValue) {
+  function toggleTag(dim: (typeof REVIEW_TAG_DIMENSIONS)[number], picked: ReviewTagValue) {
     setTags((prev) => {
       const next = new Set(prev);
       const alreadyPicked = prev.has(picked);
-      next.delete(leftValue);
-      next.delete(rightValue);
+      next.delete(dim.left.value);
+      next.delete(dim.middle.value);
+      next.delete(dim.right.value);
       if (!alreadyPicked) next.add(picked);
       return next;
     });
@@ -334,17 +335,25 @@ export function ReviewSection({
         </div>
       </div>
 
+      <label className="flex flex-col gap-1 text-sm">
+        Review (optional)
+        <textarea
+          value={reviewText}
+          onChange={(e) => setReviewText(e.target.value)}
+          rows={3}
+          className="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 focus:border-accent focus:outline-none"
+        />
+      </label>
+
       <div className="flex flex-col gap-2">
-        <span className="text-xs text-zinc-500">
-          Optional: how did specific parts of the skin land? (pick any, none required)
-        </span>
+        <span className="text-xs text-zinc-500">Optional: add dimension tags</span>
         {REVIEW_TAG_DIMENSIONS.map((dim) => (
           <div key={dim.label} className="flex items-center justify-between gap-3 text-sm">
             <span className="text-zinc-400">{dim.label}</span>
             <div className="flex gap-1.5">
               <button
                 type="button"
-                onClick={() => toggleTag(dim.left.value, dim.right.value, dim.left.value)}
+                onClick={() => toggleTag(dim, dim.left.value)}
                 aria-pressed={tags.has(dim.left.value)}
                 className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   tags.has(dim.left.value)
@@ -356,7 +365,19 @@ export function ReviewSection({
               </button>
               <button
                 type="button"
-                onClick={() => toggleTag(dim.left.value, dim.right.value, dim.right.value)}
+                onClick={() => toggleTag(dim, dim.middle.value)}
+                aria-pressed={tags.has(dim.middle.value)}
+                className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  tags.has(dim.middle.value)
+                    ? "border-transparent bg-surface-2 text-zinc-100 ring-1 ring-zinc-500"
+                    : "border-border-subtle text-zinc-400 hover:border-zinc-600"
+                }`}
+              >
+                {dim.middle.label}
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleTag(dim, dim.right.value)}
                 aria-pressed={tags.has(dim.right.value)}
                 className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   tags.has(dim.right.value)
@@ -370,16 +391,6 @@ export function ReviewSection({
           </div>
         ))}
       </div>
-
-      <label className="flex flex-col gap-1 text-sm">
-        Review (optional)
-        <textarea
-          value={reviewText}
-          onChange={(e) => setReviewText(e.target.value)}
-          rows={3}
-          className="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 focus:border-accent focus:outline-none"
-        />
-      </label>
 
       {errorMessage && (
         <p role="alert" className="text-sm text-red-500">

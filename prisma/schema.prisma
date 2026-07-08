@@ -192,14 +192,19 @@ model Review {
 enum ReviewTagType {
   great_design
   clunky_design
+  average_design
   great_sound
   weak_sound
+  average_sound
   great_vfx
   weak_vfx
+  average_vfx
   great_feel
   clunky_feel
+  average_feel
   underrated
   overrated
+  mixed_community
 
   @@map("review_tag_type")
 }
