@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getCatalogPage, type CatalogCursor, type CatalogFilter, type CatalogSort } from "@/lib/catalog";
+import { getCatalogPage, type CatalogCursor, type CatalogSort } from "@/lib/catalog";
 
 const SORT_OPTIONS: CatalogSort[] = ["name", "price-asc", "price-desc"];
-const FILTER_OPTIONS: CatalogFilter[] = ["unreviewed-owned"];
 
 function parseCursor(raw: string | null): CatalogCursor | null {
   if (!raw) return null;
@@ -33,10 +32,6 @@ export async function GET(request: Request) {
     ? (sortParam as CatalogSort)
     : "price-desc";
   const cursor = parseCursor(searchParams.get("cursor"));
-  const filterParam = searchParams.get("filter");
-  const filter = FILTER_OPTIONS.includes(filterParam as CatalogFilter)
-    ? (filterParam as CatalogFilter)
-    : undefined;
   const user = await getCurrentUser();
 
   const { skins, nextCursor } = await getCatalogPage({
@@ -47,7 +42,6 @@ export async function GET(request: Request) {
     cursor,
     limit: 24,
     viewerId: user?.id,
-    filter,
   });
 
   return NextResponse.json({

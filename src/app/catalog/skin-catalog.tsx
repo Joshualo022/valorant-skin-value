@@ -70,7 +70,6 @@ export function SkinCatalog({
 
   const requestedWeaponSlug = searchParams.get("weapon");
   const requestedTierSlug = searchParams.get("tier");
-  const requestedFilter = searchParams.get("filter");
 
   const [ownedSkinIds, setOwnedSkinIds] = useState(() => new Set(initialOwnedSkinIds));
   // null = "All Weapons" — the default landing state when arriving from the
@@ -91,13 +90,6 @@ export function SkinCatalog({
       requestedTierSlug && tiers.some((t) => t.name.toLowerCase() === requestedTierSlug)
         ? requestedTierSlug
         : null
-  );
-  // Deep-linked from the skin detail page after a review submission (see
-  // review-section.tsx) — "skins you own but haven't reviewed yet". Server
-  // silently ignores it for a logged-out request rather than erroring, so
-  // there's no separate not-logged-in UI state to handle here.
-  const [unreviewedOwnedFilter, setUnreviewedOwnedFilter] = useState(
-    () => requestedFilter === "unreviewed-owned"
   );
   const [pendingOwnershipSkinId, setPendingOwnershipSkinId] = useState<string | null>(null);
   const [pendingLikeSkinId, setPendingLikeSkinId] = useState<string | null>(null);
@@ -123,11 +115,6 @@ export function SkinCatalog({
     const slug = tier ? tier.name.toLowerCase() : null;
     setSelectedTierSlug(slug);
     setFilterParam("tier", slug);
-  }
-
-  function dismissUnreviewedOwnedFilter() {
-    setUnreviewedOwnedFilter(false);
-    setFilterParam("filter", null);
   }
 
   // Debounce typed search so every keystroke doesn't fire its own request —
@@ -158,7 +145,6 @@ export function SkinCatalog({
       if (selectedWeaponId) params.set("weaponId", selectedWeaponId);
       if (selectedTierName) params.set("tierName", selectedTierName);
       if (debouncedSearchQuery) params.set("search", debouncedSearchQuery);
-      if (unreviewedOwnedFilter) params.set("filter", "unreviewed-owned");
       params.set("sort", sortBy);
       if (cursor) params.set("cursor", cursor);
 
@@ -181,7 +167,7 @@ export function SkinCatalog({
         }
       }
     },
-    [selectedWeaponId, selectedTierName, debouncedSearchQuery, sortBy, unreviewedOwnedFilter]
+    [selectedWeaponId, selectedTierName, debouncedSearchQuery, sortBy]
   );
 
   // Any filter change resets to page 1 rather than appending — the old
@@ -190,7 +176,7 @@ export function SkinCatalog({
   // render) rather than in the effect below, so React can apply it in the
   // same commit instead of rendering once with stale skins and only
   // clearing them a tick later.
-  const filterKey = `${selectedWeaponId ?? ""}|${selectedTierName ?? ""}|${debouncedSearchQuery}|${sortBy}|${unreviewedOwnedFilter}`;
+  const filterKey = `${selectedWeaponId ?? ""}|${selectedTierName ?? ""}|${debouncedSearchQuery}|${sortBy}`;
   const [appliedFilterKey, setAppliedFilterKey] = useState(filterKey);
   if (filterKey !== appliedFilterKey) {
     setAppliedFilterKey(filterKey);
@@ -348,20 +334,6 @@ export function SkinCatalog({
         <p role="alert" className="text-sm text-red-500">
           {errorMessage}
         </p>
-      )}
-
-      {unreviewedOwnedFilter && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-2.5 text-sm text-accent">
-          <span>Showing skins you own but haven&apos;t reviewed yet</span>
-          <button
-            type="button"
-            onClick={dismissUnreviewedOwnedFilter}
-            aria-label="Clear filter"
-            className="cursor-pointer rounded-full p-1 text-accent transition-colors hover:bg-accent/15"
-          >
-            ✕
-          </button>
-        </div>
       )}
 
       <div className="relative w-full max-w-sm">

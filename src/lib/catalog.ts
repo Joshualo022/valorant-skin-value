@@ -3,11 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export type CatalogSort = "name" | "price-asc" | "price-desc";
 
-// Only one filter for now — a skin the viewer owns but hasn't reviewed. Kept
-// as its own option rather than folded into weaponId/tierName since it
-// depends on the viewer's identity, not just the skin's own attributes.
-export type CatalogFilter = "unreviewed-owned";
-
 // What the client remembers about the last row of the previous page —
 // the sort field's value plus the row's id as a tiebreaker. This is a
 // keyset ("seek") cursor, not an offset: each page is anchored to an exact
@@ -25,13 +20,10 @@ export type CatalogPageOptions = {
   sort?: CatalogSort;
   cursor?: CatalogCursor | null;
   limit?: number;
-  // The logged-in viewer, if any — used to resolve isLikedByViewer per skin,
-  // and (together with `filter`) to scope the unreviewed-owned filter to
-  // that viewer's own ownership/reviews. Undefined (not just omitted) for a
-  // logged-out request, so every skin correctly comes back not-liked and
-  // the filter is silently ignored rather than erroring.
+  // The logged-in viewer, if any — used to resolve isLikedByViewer per skin.
+  // Undefined (not just omitted) for a logged-out request, so every skin
+  // correctly comes back not-liked.
   viewerId?: string;
-  filter?: CatalogFilter;
 };
 
 // What the two page-fetch functions below produce before like data is
@@ -108,19 +100,11 @@ async function getCatalogPageByName({
   search,
   cursor,
   limit = 24,
-  viewerId,
-  filter,
 }: CatalogPageOptions): Promise<CatalogBasePageResult> {
   const filters: Prisma.SkinWhereInput[] = [];
   if (weaponId) filters.push({ weaponId });
   if (tierName) filters.push({ contentTier: { name: tierName } });
   if (search) filters.push({ name: { contains: search, mode: "insensitive" } });
-  // Ignored (not an error) when logged out — there's no viewer to scope
-  // "owned but unreviewed" to.
-  if (filter === "unreviewed-owned" && viewerId) {
-    filters.push({ ownedBy: { some: { userId: viewerId } } });
-    filters.push({ NOT: { reviews: { some: { userId: viewerId } } } });
-  }
 
   // The cursor condition is what makes this "seek" pagination: rather than
   // "skip N rows" (which can skip or repeat rows if the table changes
@@ -185,8 +169,6 @@ async function getCatalogPageByPrice({
   sort,
   cursor,
   limit = 24,
-  viewerId,
-  filter,
 }: CatalogPageOptions & { sort: "price-asc" | "price-desc" }): Promise<CatalogBasePageResult> {
   // COALESCE(vpPriceOverride, tier price) — the same fallback getSkinPrice()
   // applies in application code, expressed here as SQL so the database can
@@ -198,16 +180,6 @@ async function getCatalogPageByPrice({
   if (tierName) conditions.push(Prisma.sql`ct.name = ${tierName}`);
   if (search) {
     conditions.push(Prisma.sql`s.name ILIKE ${"%" + escapeLikePattern(search) + "%"}`);
-  }
-  // Same rule as getCatalogPageByName's Prisma-builder version, expressed as
-  // EXISTS/NOT EXISTS since this path is raw SQL. Ignored when logged out.
-  if (filter === "unreviewed-owned" && viewerId) {
-    conditions.push(
-      Prisma.sql`EXISTS (SELECT 1 FROM user_owned_skins uos WHERE uos.skin_id = s.id AND uos.user_id = ${viewerId})`
-    );
-    conditions.push(
-      Prisma.sql`NOT EXISTS (SELECT 1 FROM reviews r WHERE r.skin_id = s.id AND r.user_id = ${viewerId})`
-    );
   }
   if (cursor) {
     const compare = sort === "price-asc" ? Prisma.sql`>` : Prisma.sql`<`;

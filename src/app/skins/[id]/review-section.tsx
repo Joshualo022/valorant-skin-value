@@ -4,6 +4,14 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { REVIEW_TAG_DIMENSIONS, type ReviewTagValue } from "@/lib/review-tags";
+import type { TierVisual } from "@/lib/tier-style";
+
+type SubmittedReviewSummary = {
+  id: string;
+  qualityScore: number;
+  valueScore: number;
+  wouldRebuy: boolean;
+};
 
 type ExistingReview = {
   id: string;
@@ -83,12 +91,16 @@ function ScoreControl({
 
 export function ReviewSection({
   skinId,
+  skinName,
+  tier,
   isLoggedIn,
   ownsSkin,
   existingReview,
   reviewCount,
 }: {
   skinId: string;
+  skinName: string;
+  tier: TierVisual;
   isLoggedIn: boolean;
   ownsSkin: boolean;
   existingReview: ExistingReview | null;
@@ -113,19 +125,110 @@ export function ReviewSection({
   const [reviewText, setReviewText] = useState(existingReview?.reviewText ?? "");
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [justSubmitted, setJustSubmitted] = useState(false);
+  const [submittedReview, setSubmittedReview] = useState<SubmittedReviewSummary | null>(null);
 
   const effectivelyOwnsSkin = ownsSkin || justAdded;
   const canSubmit = qualityScore !== null && valueScore !== null && wouldRebuy !== null;
 
-  // A brief confirmation before handing off to the next unreviewed skin —
-  // shown in place of whatever this component would otherwise render, since
-  // the redirect that follows makes any of those states moot.
-  if (justSubmitted) {
+  // Closes the modal and, once the DOM has had a tick to reflect the
+  // router.refresh() triggered at submit time, scrolls to the review card
+  // below — shared by both the X button and "See my review", which are
+  // spec'd to behave identically.
+  function closeAndScrollToReview() {
+    const reviewId = submittedReview?.id;
+    setSubmittedReview(null);
+    setIsEditing(false);
+    if (reviewId) {
+      setTimeout(() => {
+        document.getElementById(`review-${reviewId}`)?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 50);
+    }
+  }
+
+  // Shown in place of whatever this component would otherwise render, since
+  // the modal's own action buttons cover every path out (stay here, or
+  // navigate away) that the rest of the form would otherwise offer.
+  if (submittedReview) {
     return (
-      <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
-        <div className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30">
-          ✓ Review submitted
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div className="relative flex w-full max-w-sm flex-col items-center gap-5 rounded-2xl border border-border-subtle bg-surface p-6 text-center shadow-2xl">
+          <button
+            type="button"
+            onClick={closeAndScrollToReview}
+            aria-label="Close"
+            className="absolute right-3 top-3 cursor-pointer rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            ✕
+          </button>
+
+          <div className="relative flex h-16 w-16 items-center justify-center">
+            <span
+              className={`absolute inset-0 rounded-full bg-gradient-to-br ${tier.gradient} animate-ping opacity-60`}
+            />
+            <span
+              className={`relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br ${tier.gradient} ${tier.ringGlow}`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8" aria-hidden="true">
+                <path
+                  d="M5 13l4 4L19 7"
+                  stroke="white"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <h2 className="font-display text-lg font-bold">Review submitted!</h2>
+            <p className="text-sm text-zinc-400">{skinName}</p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs">
+            <span className="rounded-full bg-surface-2 px-2.5 py-1 text-zinc-300">
+              Quality {submittedReview.qualityScore}/10
+            </span>
+            <span className="rounded-full bg-surface-2 px-2.5 py-1 text-zinc-300">
+              Value {submittedReview.valueScore}/10
+            </span>
+            <span
+              className={`rounded-full px-2.5 py-1 ${
+                submittedReview.wouldRebuy
+                  ? "bg-accent/15 text-accent"
+                  : "bg-surface-2 text-zinc-400"
+              }`}
+            >
+              {submittedReview.wouldRebuy ? "Would rebuy" : "Would not rebuy"}
+            </span>
+          </div>
+
+          <div className="flex w-full flex-col gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => router.push("/collection#all-owned")}
+              className="cursor-pointer rounded-full bg-gradient-to-r from-accent to-accent-strong px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_-6px_rgba(255,47,146,0.8)] transition-transform hover:scale-105"
+            >
+              Review another skin
+            </button>
+            <button
+              type="button"
+              onClick={closeAndScrollToReview}
+              className="cursor-pointer rounded-full border border-border-subtle bg-surface-2 px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
+            >
+              See my review
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/collection")}
+              className="cursor-pointer text-sm text-zinc-400 hover:text-foreground"
+            >
+              Back to collection
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -229,11 +332,19 @@ export function ReviewSection({
         throw new Error(body.error || "Something went wrong");
       }
 
-      // Hold on the confirmation just long enough to read it, then hand off
-      // to the next owned-but-unreviewed skin — router.refresh() isn't
-      // needed here since we're navigating away from this page entirely.
-      setJustSubmitted(true);
-      setTimeout(() => router.push("/catalog?filter=unreviewed-owned"), 1200);
+      const { review } = await res.json();
+      // canSubmit already guarantees these are non-null at this point.
+      setSubmittedReview({
+        id: review.id,
+        qualityScore: qualityScore!,
+        valueScore: valueScore!,
+        wouldRebuy: wouldRebuy!,
+      });
+      // Refreshes server-fetched props (the reviews list, existingReview)
+      // behind the modal, so the review the user just wrote is already on
+      // the page — and scrollable to — once they close it.
+      router.refresh();
+      setPending(false);
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong");
       setPending(false);

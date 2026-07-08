@@ -130,6 +130,8 @@ export default async function SkinDetailPage({
 
       <ReviewSection
         skinId={id}
+        skinName={skin.name}
+        tier={tier}
         isLoggedIn={!!user}
         ownsSkin={ownsSkin}
         reviewCount={reviewCount}
@@ -165,7 +167,8 @@ export default async function SkinDetailPage({
             return (
             <div
               key={review.id}
-              className="flex gap-3 rounded-2xl border border-border-subtle bg-surface p-4"
+              id={`review-${review.id}`}
+              className="flex scroll-mt-20 gap-3 rounded-2xl border border-border-subtle bg-surface p-4"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-sm font-bold text-white">
                 {reviewerName[0]?.toUpperCase() ?? "?"}
