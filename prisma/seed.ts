@@ -9,6 +9,7 @@
 import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
 import { CONTENT_TIER_VP_PRICES } from "./seed-data/content-tier-prices";
+import { SKIN_IMAGE_OVERRIDES } from "./seed-data/skin-image-overrides";
 
 const VALORANT_API_BASE = "https://valorant-api.com/v1";
 
@@ -151,6 +152,7 @@ async function main() {
       }
 
       const imageUrl = pickImageUrl(
+        SKIN_IMAGE_OVERRIDES[skin.uuid],
         skin.displayIcon,
         skin.chromas[0]?.displayIcon,
         skin.chromas[0]?.fullRender
