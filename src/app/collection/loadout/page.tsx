@@ -41,6 +41,7 @@ export default async function CollectionLoadoutPage() {
         collectionValue={totalValue}
         loadoutValuation={loadoutValuation}
         reviewedCount={reviewedCount}
+        collectionVisibility={user.collectionVisibility}
         shareSlug={user.collectionShareSlug}
         origin={origin}
         ownedSkinsForFlexItem={allOwnedSkins}

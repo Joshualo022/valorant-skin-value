@@ -5,20 +5,30 @@ import Image from "next/image";
 import { getTierStyle } from "@/lib/tier-style";
 import type { FullOwnedSkin } from "./all-owned-skins-grid";
 
+type Visibility = "PRIVATE" | "LINK";
+
+const VISIBILITY_OPTIONS: { value: Visibility; label: string; description: string }[] = [
+  { value: "PRIVATE", label: "Private", description: "Only you can see your collection" },
+  { value: "LINK", label: "Anyone with link", description: "Anyone with your link can see your collection" },
+];
+
 // `origin` is passed down from the server (see collection/page.tsx) instead
 // of read from window.location here, so the first client render always
 // matches what the server already sent — no hydration mismatch.
 export function SharePanel({
+  initialVisibility,
   initialSlug,
   origin,
   ownedSkins,
   initialFlexItemSkinId,
 }: {
+  initialVisibility: Visibility;
   initialSlug: string | null;
   origin: string;
   ownedSkins: FullOwnedSkin[];
   initialFlexItemSkinId: string | null;
 }) {
+  const [visibility, setVisibility] = useState(initialVisibility);
   const [slug, setSlug] = useState(initialSlug);
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -28,30 +38,25 @@ export function SharePanel({
 
   const shareUrl = slug ? `${origin}/collection/${slug}` : null;
 
-  async function enableSharing() {
+  async function selectVisibility(next: Visibility) {
+    if (next === visibility) return;
+    const previous = visibility;
     setPending(true);
     setErrorMessage(null);
+    setVisibility(next);
+
     try {
-      const res = await fetch("/api/me/share", { method: "POST" });
+      const res = await fetch("/api/me/visibility", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: next }),
+      });
       if (!res.ok) throw new Error("Request failed");
-      const data = await res.json();
+      const data = (await res.json()) as { visibility: Visibility; slug: string | null };
+      setVisibility(data.visibility);
       setSlug(data.slug);
     } catch {
-      setErrorMessage("Something went wrong — please try again.");
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function disableSharing() {
-    setPending(true);
-    setErrorMessage(null);
-    try {
-      const res = await fetch("/api/me/share", { method: "DELETE" });
-      if (!res.ok) throw new Error("Request failed");
-      setSlug(null);
-      setCopied(false);
-    } catch {
+      setVisibility(previous);
       setErrorMessage("Something went wrong — please try again.");
     } finally {
       setPending(false);
@@ -89,28 +94,30 @@ export function SharePanel({
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold">Share my collection</div>
-          <p className="text-xs text-zinc-500">
-            {slug
-              ? "Anyone with this link can view a read-only summary — it isn't publicly listed or searchable."
-              : "Generate an unlisted link to show off your collection — off by default, and only visible to people you send it to."}
-          </p>
-        </div>
-        <button
-          onClick={slug ? disableSharing : enableSharing}
-          disabled={pending}
-          className={`shrink-0 cursor-pointer rounded-full border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-            slug
-              ? "border-border-subtle text-zinc-300 hover:border-red-500/50 hover:text-red-400"
-              : "border-transparent bg-gradient-to-r from-accent to-accent-strong text-white hover:brightness-110"
-          }`}
-        >
-          {pending ? "Working…" : slug ? "Stop sharing" : "Share my collection"}
-        </button>
+      <div>
+        <div className="text-sm font-semibold">Collection visibility</div>
+        <p className="text-xs text-zinc-500">Choose who can see a read-only summary of your collection.</p>
       </div>
-      {slug && shareUrl && (
+
+      <div className="flex flex-col gap-2">
+        {VISIBILITY_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => selectVisibility(option.value)}
+            disabled={pending}
+            className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              visibility === option.value
+                ? "border-accent/60 bg-accent/10"
+                : "border-border-subtle bg-surface-2 hover:border-zinc-600"
+            }`}
+          >
+            <span className="text-sm font-semibold text-foreground">{option.label}</span>
+            <span className="text-xs text-zinc-500">{option.description}</span>
+          </button>
+        ))}
+      </div>
+
+      {visibility === "LINK" && shareUrl && (
         <div className="flex items-center gap-2 rounded-xl border border-border-subtle bg-surface-2 px-3 py-2">
           <span className="flex-1 truncate text-xs text-zinc-400">{shareUrl}</span>
           <button
@@ -121,7 +128,7 @@ export function SharePanel({
           </button>
         </div>
       )}
-      {slug && ownedSkins.length > 0 && (
+      {visibility !== "PRIVATE" && ownedSkins.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-border-subtle pt-3">
           <div>
             <div className="text-sm font-semibold">Flex item</div>

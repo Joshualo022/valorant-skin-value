@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getSharedCollectionBySlug } from "@/lib/collection";
+import { getCollectionAccess, getSharedCollectionBySlug } from "@/lib/collection";
+import { getCurrentUser } from "@/lib/auth";
 import { getSkinPrice } from "@/lib/pricing";
 import { getTierStyle } from "@/lib/tier-style";
 import { LoadoutGrid } from "../loadout/loadout-grid";
+import { FollowButton } from "./follow-button";
 
 export async function generateMetadata({
   params,
@@ -13,6 +15,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const access = await getCollectionAccess(slug);
+  if (!access || !access.canView) return {};
+
   const shared = await getSharedCollectionBySlug(slug);
   if (!shared) return {};
 
@@ -28,6 +33,21 @@ export default async function SharedCollectionPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const viewer = await getCurrentUser();
+  const access = await getCollectionAccess(slug, viewer?.id);
+  if (!access) notFound();
+
+  if (access.visibility === "PRIVATE" && !access.isOwner) {
+    return (
+      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-2 p-6 pt-24 text-center">
+        <h1 className="font-display text-xl font-bold">This collection is private</h1>
+        <p className="text-sm text-zinc-400">
+          {access.displayName} hasn&apos;t made their collection visible to others.
+        </p>
+      </div>
+    );
+  }
+
   const shared = await getSharedCollectionBySlug(slug);
   if (!shared) notFound();
 
@@ -45,6 +65,16 @@ export default async function SharedCollectionPage({
         <p className="text-sm text-zinc-400">
           {collectionSize} skin{collectionSize === 1 ? "" : "s"} owned
         </p>
+        {!access.isOwner && (
+          <div className="pt-2">
+            <FollowButton
+              targetUserId={access.ownerId}
+              isLoggedIn={!!viewer}
+              initialFollowing={access.isFollowing}
+              initialFollowerCount={access.followerCount}
+            />
+          </div>
+        )}
       </div>
 
       {flexItem && flexTier && (

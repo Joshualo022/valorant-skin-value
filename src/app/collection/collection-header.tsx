@@ -17,6 +17,7 @@ export function CollectionHeader({
   collectionValue,
   loadoutValuation,
   reviewedCount,
+  collectionVisibility,
   shareSlug,
   origin,
   ownedSkinsForFlexItem,
@@ -27,6 +28,7 @@ export function CollectionHeader({
   collectionValue: number;
   loadoutValuation: number;
   reviewedCount: number;
+  collectionVisibility: "PRIVATE" | "LINK";
   shareSlug: string | null;
   origin: string;
   ownedSkinsForFlexItem: FullOwnedSkin[];
@@ -114,6 +116,7 @@ export function CollectionHeader({
       </div>
 
       <SharePanel
+        initialVisibility={collectionVisibility}
         initialSlug={shareSlug}
         origin={origin}
         ownedSkins={ownedSkinsForFlexItem}

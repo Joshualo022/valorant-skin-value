@@ -27,6 +27,9 @@ model User {
   // Deliberately a manual pick rather than a derived "rarest item" — the user
   // decides what they're proud of, not just what cost the most.
   flexItemSkinId String? @map("flex_item_skin_id")
+  // Replaces the old binary share on/off — see /api/me/visibility. Default
+  // PRIVATE keeps existing users' collections closed until they opt in.
+  collectionVisibility CollectionVisibility @default(PRIVATE) @map("collection_visibility")
 
   ownedSkins     UserOwnedSkin[]
   activeLoadouts ActiveLoadout[]
@@ -35,8 +38,32 @@ model User {
   wishlists      Wishlist[]
   reviewLikes    ReviewLike[]
   flexItemSkin   Skin?           @relation("FlexItem", fields: [flexItemSkinId], references: [id])
+  // Follow rows where this user is the follower — i.e. who they follow.
+  following Follow[] @relation("Following")
+  // Follow rows where this user is being followed — i.e. their followers.
+  followers Follow[] @relation("Followers")
 
   @@map("users")
+}
+
+enum CollectionVisibility {
+  PRIVATE
+  LINK
+
+  @@map("collection_visibility")
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
 }
 
 model Weapon {
@@ -134,11 +161,15 @@ model UserOwnedSkin {
 }
 
 model ActiveLoadout {
-  id       String  @id @default(uuid())
-  userId   String  @map("user_id")
-  weaponId String  @map("weapon_id")
-  skinId   String  @map("skin_id")
-  chromaId String? @map("chroma_id")
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  weaponId  String   @map("weapon_id")
+  skinId    String   @map("skin_id")
+  chromaId  String?  @map("chroma_id")
+  // When this weapon's equip last changed — feeds the "[name] equipped
+  // [skin]" feed item (see src/lib/feed.ts). Didn't exist before this table
+  // had any timestamp at all.
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   weapon Weapon  @relation(fields: [weaponId], references: [id])

@@ -108,6 +108,12 @@ export default async function RootLayout({
                     <span className="hidden sm:inline">Skin Catalog</span>
                   </Link>
                   <Link
+                    href="/feed"
+                    className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"
+                  >
+                    Feed
+                  </Link>
+                  <Link
                     href="/wishlist"
                     aria-label="Liked Skins"
                     className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"

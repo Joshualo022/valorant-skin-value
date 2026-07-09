@@ -102,6 +102,60 @@ export async function getReviewedSkinIds(userId: string): Promise<Set<string>> {
   return new Set(reviews.map((r) => r.skinId));
 }
 
+export type CollectionAccess = {
+  ownerId: string;
+  displayName: string;
+  visibility: "PRIVATE" | "LINK";
+  followerCount: number;
+  isFollowing: boolean;
+  isOwner: boolean;
+  // Whether this viewer should see the full collection — false for PRIVATE
+  // unless they're the owner, in which case the page renders a private-state
+  // message instead.
+  canView: boolean;
+};
+
+// A cheap, slug-only lookup used to decide *whether* to render the full
+// shared-collection page before paying for getSharedCollectionBySlug's
+// aggregation — private and locked-out collections never need that work
+// done at all.
+export async function getCollectionAccess(
+  slug: string,
+  viewerId?: string
+): Promise<CollectionAccess | null> {
+  const user = await prisma.user.findUnique({
+    where: { collectionShareSlug: slug },
+    select: {
+      id: true,
+      displayName: true,
+      email: true,
+      collectionVisibility: true,
+      _count: { select: { followers: true } },
+    },
+  });
+  if (!user) return null;
+
+  const isOwner = viewerId === user.id;
+  const isFollowing =
+    !isOwner && !!viewerId
+      ? !!(await prisma.follow.findUnique({
+          where: { followerId_followingId: { followerId: viewerId, followingId: user.id } },
+        }))
+      : false;
+
+  const canView = isOwner || user.collectionVisibility === "LINK";
+
+  return {
+    ownerId: user.id,
+    displayName: resolveDisplayName(user),
+    visibility: user.collectionVisibility,
+    followerCount: user._count.followers,
+    isFollowing,
+    isOwner,
+    canView,
+  };
+}
+
 export type SharedCollectionSkin = {
   skinId: string;
   name: string;
