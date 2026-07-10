@@ -108,6 +108,8 @@ export type CollectionAccess = {
   visibility: "PRIVATE" | "LINK";
   followerCount: number;
   isFollowing: boolean;
+  appraisalCount: number;
+  isAppraised: boolean;
   isOwner: boolean;
   // Whether this viewer should see the full collection — false for PRIVATE
   // unless they're the owner, in which case the page renders a private-state
@@ -130,18 +132,23 @@ export async function getCollectionAccess(
       displayName: true,
       email: true,
       collectionVisibility: true,
-      _count: { select: { followers: true } },
+      _count: { select: { followers: true, appraisalsReceived: true } },
     },
   });
   if (!user) return null;
 
   const isOwner = viewerId === user.id;
-  const isFollowing =
+  const [isFollowing, isAppraised] =
     !isOwner && !!viewerId
-      ? !!(await prisma.follow.findUnique({
-          where: { followerId_followingId: { followerId: viewerId, followingId: user.id } },
-        }))
-      : false;
+      ? await Promise.all([
+          prisma.follow.findUnique({
+            where: { followerId_followingId: { followerId: viewerId, followingId: user.id } },
+          }),
+          prisma.collectionAppraisal.findUnique({
+            where: { fromUserId_toUserId: { fromUserId: viewerId, toUserId: user.id } },
+          }),
+        ]).then(([follow, appraisal]) => [!!follow, !!appraisal])
+      : [false, false];
 
   const canView = isOwner || user.collectionVisibility === "LINK";
 
@@ -151,6 +158,8 @@ export async function getCollectionAccess(
     visibility: user.collectionVisibility,
     followerCount: user._count.followers,
     isFollowing,
+    appraisalCount: user._count.appraisalsReceived,
+    isAppraised,
     isOwner,
     canView,
   };

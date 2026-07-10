@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notify } from "@/lib/notifications";
 
 // Single toggle endpoint, same reasoning as POST /api/reviews/:id/like — the
 // client only knows "the button was tapped," not which state it's currently
@@ -33,6 +34,7 @@ export async function POST(
     await prisma.follow.delete({ where: { id: existingFollow.id } });
   } else {
     await prisma.follow.create({ data: { followerId: user.id, followingId } });
+    await notify({ userId: followingId, fromUserId: user.id, type: "NEW_FOLLOWER" });
   }
 
   const followerCount = await prisma.follow.count({ where: { followingId } });

@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { resolveDisplayName } from "@/lib/user";
 import { DisplayNameInterstitial } from "@/components/display-name-interstitial";
 import { NavUserMenu } from "@/components/nav-user-menu";
+import { NotificationBell } from "@/components/notification-bell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -123,6 +124,7 @@ export default async function RootLayout({
                     </span>
                     <span className="hidden sm:inline">Liked</span>
                   </Link>
+                  <NotificationBell />
                   <NavUserMenu displayName={resolveDisplayName(user)} email={user.email} />
                 </>
               ) : (

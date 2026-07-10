@@ -8,6 +8,7 @@ import { getSkinPrice } from "@/lib/pricing";
 import { getTierStyle } from "@/lib/tier-style";
 import { LoadoutGrid } from "../loadout/loadout-grid";
 import { FollowButton } from "./follow-button";
+import { AppraisalButton } from "./appraisal-button";
 
 export async function generateMetadata({
   params,
@@ -66,12 +67,18 @@ export default async function SharedCollectionPage({
           {collectionSize} skin{collectionSize === 1 ? "" : "s"} owned
         </p>
         {!access.isOwner && (
-          <div className="pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
             <FollowButton
               targetUserId={access.ownerId}
               isLoggedIn={!!viewer}
               initialFollowing={access.isFollowing}
               initialFollowerCount={access.followerCount}
+            />
+            <AppraisalButton
+              targetUserId={access.ownerId}
+              isLoggedIn={!!viewer}
+              initialAppraised={access.isAppraised}
+              initialAppraisalCount={access.appraisalCount}
             />
           </div>
         )}

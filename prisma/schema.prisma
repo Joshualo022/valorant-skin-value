@@ -42,6 +42,10 @@ model User {
   following Follow[] @relation("Following")
   // Follow rows where this user is being followed — i.e. their followers.
   followers Follow[] @relation("Followers")
+  appraisalsGiven    CollectionAppraisal[] @relation("AppraisalsGiven")
+  appraisalsReceived CollectionAppraisal[] @relation("AppraisalsReceived")
+  notificationsReceived Notification[] @relation("NotificationsReceived")
+  notificationsSent     Notification[] @relation("NotificationsSent")
 
   @@map("users")
 }
@@ -64,6 +68,45 @@ model Follow {
 
   @@unique([followerId, followingId])
   @@map("follows")
+}
+
+model CollectionAppraisal {
+  id         String   @id @default(uuid())
+  fromUserId String   @map("from_user_id")
+  toUserId   String   @map("to_user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  fromUser User @relation("AppraisalsGiven", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("AppraisalsReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@map("collection_appraisals")
+}
+
+enum NotificationType {
+  REVIEW_LIKED
+  COLLECTION_APPRAISED
+  NEW_FOLLOWER
+
+  @@map("notification_type")
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  fromUserId  String           @map("from_user_id")
+  type        NotificationType
+  // reviewId for REVIEW_LIKED, null for the other types — see
+  // src/lib/notifications.ts for how each type resolves its display text.
+  referenceId String?          @map("reference_id")
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user     User @relation("NotificationsReceived", fields: [userId], references: [id], onDelete: Cascade)
+  fromUser User @relation("NotificationsSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
 }
 
 model Weapon {

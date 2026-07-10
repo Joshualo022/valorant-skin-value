@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notify } from "@/lib/notifications";
 
 // Single toggle endpoint rather than the wishlist's split POST/DELETE pair —
 // the client only knows "the heart was tapped," not which state it's
@@ -16,7 +17,7 @@ export async function POST(
   }
 
   const { id: reviewId } = await params;
-  const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { id: true } });
+  const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { id: true, userId: true } });
   if (!review) {
     return NextResponse.json({ error: "Review not found" }, { status: 404 });
   }
@@ -29,6 +30,7 @@ export async function POST(
     await prisma.reviewLike.delete({ where: { id: existingLike.id } });
   } else {
     await prisma.reviewLike.create({ data: { reviewId, userId: user.id } });
+    await notify({ userId: review.userId, fromUserId: user.id, type: "REVIEW_LIKED", referenceId: reviewId });
   }
 
   const likeCount = await prisma.reviewLike.count({ where: { reviewId } });

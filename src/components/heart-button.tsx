@@ -24,9 +24,22 @@ function HeartIcon({ filled }: { filled: boolean }) {
 // gradients, buttons). Written as literal Tailwind classes rather than an
 // interpolated hex, same reasoning as tier-style.ts: Tailwind's build-time
 // scanner only picks up class names that appear as real strings in source.
-const LIKED_INLINE = "border-transparent bg-[#ff4655]/15 text-[#ff4655]";
-const UNLIKED_INLINE = "border-border-subtle text-zinc-300 hover:border-[#ff4655]/50 hover:text-[#ff4655]";
-const LIKED_OVERLAY = "text-[#ff4655]";
+//
+// "gold" is a second tone for the collection-appraisal heart — it needs to
+// read as a distinct signal from a skin/review like, not a variant of it, so
+// it gets its own color (#FFD700) rather than reusing red at lower opacity.
+const TONE_CLASSES = {
+  red: {
+    likedInline: "border-transparent bg-[#ff4655]/15 text-[#ff4655]",
+    unlikedInline: "border-border-subtle text-zinc-300 hover:border-[#ff4655]/50 hover:text-[#ff4655]",
+    likedOverlay: "text-[#ff4655]",
+  },
+  gold: {
+    likedInline: "border-transparent bg-[#ffd700]/15 text-[#ffd700]",
+    unlikedInline: "border-border-subtle text-zinc-300 hover:border-[#ffd700]/50 hover:text-[#ffd700]",
+    likedOverlay: "text-[#ffd700]",
+  },
+} as const;
 const UNLIKED_OVERLAY = "text-white";
 
 // Shared like/heart toggle — used on the catalog grid (overlay variant), the
@@ -43,6 +56,8 @@ export function HeartButton({
   variant = "inline",
   className = "",
   subject = "skin",
+  label: labelOverride,
+  tone = "red",
 }: {
   liked: boolean;
   count: number;
@@ -54,8 +69,16 @@ export function HeartButton({
   // What's being liked — feeds the aria-label/title so it reads correctly
   // wherever this button is reused (skin detail header, review cards, etc).
   subject?: string;
+  // Overrides the default "Like/Unlike this {subject}" phrasing entirely —
+  // needed for the appraisal heart, where "Unlike this collection" reads
+  // wrong for a toggle that isn't really a "like".
+  label?: string;
+  // "gold" distinguishes the collection-appraisal heart from a skin/review
+  // like at a glance — see the TONE_CLASSES comment above.
+  tone?: "red" | "gold";
 }) {
   const router = useRouter();
+  const toneClasses = TONE_CLASSES[tone];
 
   function handleClick(e: React.MouseEvent) {
     // Overlay variant sits inside a card that's otherwise a link to the skin
@@ -70,7 +93,7 @@ export function HeartButton({
     onToggle();
   }
 
-  const label = liked ? `Unlike this ${subject}` : `Like this ${subject}`;
+  const label = labelOverride ?? (liked ? `Unlike this ${subject}` : `Like this ${subject}`);
 
   if (variant === "overlay") {
     return (
@@ -82,7 +105,7 @@ export function HeartButton({
         aria-label={label}
         title={label}
         className={`flex cursor-pointer items-center gap-1 rounded-full bg-black/65 px-2 py-1 backdrop-blur-sm transition-transform hover:scale-105 disabled:opacity-60 ${
-          liked ? LIKED_OVERLAY : UNLIKED_OVERLAY
+          liked ? toneClasses.likedOverlay : UNLIKED_OVERLAY
         } ${className}`}
       >
         <HeartIcon filled={liked} />
@@ -100,7 +123,7 @@ export function HeartButton({
       aria-label={label}
       title={label}
       className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
-        liked ? LIKED_INLINE : UNLIKED_INLINE
+        liked ? toneClasses.likedInline : toneClasses.unlikedInline
       } ${className}`}
     >
       <HeartIcon filled={liked} />
