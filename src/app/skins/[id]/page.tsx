@@ -9,6 +9,7 @@ import { resolveDisplayName } from "@/lib/user";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
 import { isVerifiedReviewer } from "@/lib/incentives";
+import { VpAmount } from "@/components/vp-amount";
 import { ReviewSection } from "./review-section";
 import { SkinImage } from "./skin-image";
 import { SkinLikeButton } from "./skin-like-button";
@@ -101,9 +102,8 @@ export default async function SkinDetailPage({
               />
             </div>
             <span className={`font-semibold ${tier.text}`}>{skin.contentTier.name}</span>
-            <span className="text-zinc-400">
-              · {getSkinPrice(skin).toLocaleString()} VP
-            </span>
+            <span className="text-zinc-400">·</span>
+            <VpAmount amount={getSkinPrice(skin)} className="text-zinc-400" iconSize={14} />
           </div>
         </div>
       </div>

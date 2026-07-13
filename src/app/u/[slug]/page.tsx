@@ -6,6 +6,7 @@ import { getCollectionAccess, getSharedCollectionBySlug, getOwnedSkinsWithValue 
 import { getCurrentUser } from "@/lib/auth";
 import { getSkinPrice } from "@/lib/pricing";
 import { getTierStyle } from "@/lib/tier-style";
+import { VpAmount } from "@/components/vp-amount";
 import { toFullOwnedSkins, type FullOwnedSkin } from "../../collection/owned-skins-utils";
 import { LoadoutGrid } from "../../collection/loadout/loadout-grid";
 import { FollowButton } from "./follow-button";
@@ -94,8 +95,8 @@ export default async function ProfilePage({
                 strokeLinejoin="round"
                 aria-hidden="true"
               >
-                <path d="M3 9.5 12 3l9 6.5" />
-                <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
               </svg>
               My Collection
             </Link>
@@ -171,7 +172,7 @@ async function ProfileCollection({
               <span className="font-display text-2xl font-bold text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.8)] sm:text-3xl">
                 {flexItem.name}
               </span>
-              <span className="text-sm text-zinc-300">{getSkinPrice(flexItem).toLocaleString()} VP</span>
+              <VpAmount amount={getSkinPrice(flexItem)} className="text-sm text-zinc-300" iconSize={14} />
             </div>
           </div>
         )
@@ -180,15 +181,19 @@ async function ProfileCollection({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <div className="rounded-2xl border border-border-subtle bg-surface p-4 text-center">
           <div className="text-xs uppercase tracking-wide text-zinc-500">Collection value</div>
-          <div className="mt-1 bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
-            {totalValue.toLocaleString()} VP
-          </div>
+          <VpAmount
+            amount={totalValue}
+            iconSize={18}
+            className="mt-1 justify-center text-xl text-zinc-400 sm:text-2xl"
+          />
         </div>
         <div className="rounded-2xl border border-border-subtle bg-surface p-4 text-center">
           <div className="text-xs uppercase tracking-wide text-zinc-500">Loadout valuation</div>
-          <div className="mt-1 bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
-            {loadoutValuation.toLocaleString()} VP
-          </div>
+          <VpAmount
+            amount={loadoutValuation}
+            iconSize={18}
+            className="mt-1 justify-center text-xl text-zinc-400 sm:text-2xl"
+          />
         </div>
         <div className="col-span-2 rounded-2xl border border-border-subtle bg-surface p-4 text-center sm:col-span-1">
           <div className="text-xs uppercase tracking-wide text-zinc-500">Collection size</div>
@@ -229,7 +234,7 @@ async function ProfileCollection({
                           <Image src={skin.imageUrl} alt={skin.name} fill className="object-contain" sizes="120px" />
                         </div>
                         <div className="truncate text-xs font-medium">{skin.name}</div>
-                        <div className={`text-[10px] ${skinTier.text}`}>{getSkinPrice(skin).toLocaleString()} VP</div>
+                        <VpAmount amount={getSkinPrice(skin)} className={`text-[10px] ${skinTier.text}`} iconSize={10} />
                       </Link>
                     );
                   })}

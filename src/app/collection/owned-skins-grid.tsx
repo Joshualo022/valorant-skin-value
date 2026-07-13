@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
+import { VpAmount } from "@/components/vp-amount";
 import { AllOwnedSkinsGrid, type FullOwnedSkin } from "./all-owned-skins-grid";
 
 export type OwnedSkin = {
@@ -127,10 +128,10 @@ export function OwnedSkinsGrid({
                 <div key={weapon.id} className="border-b border-border-subtle">
                   <button
                     onClick={() => setExpandedWeaponId(isExpanded ? null : weapon.id)}
-                    className="flex w-full cursor-pointer items-center gap-4 rounded-xl py-3 text-left transition-colors hover:bg-surface"
+                    className="flex w-full cursor-pointer items-center gap-3 rounded-xl py-2 text-left transition-colors hover:bg-surface"
                   >
                     <div
-                      className={`relative h-14 w-24 shrink-0 rounded-lg bg-surface-2 ${
+                      className={`relative h-10 w-16 shrink-0 rounded-lg bg-surface-2 ${
                         activeTier ? activeTier.ringGlow : ""
                       }`}
                     >
@@ -143,13 +144,13 @@ export function OwnedSkinsGrid({
                           sizes="150px"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+                        <div className="flex h-full items-center justify-center text-[10px] text-zinc-600">
                           No skin
                         </div>
                       )}
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium">{weapon.name}</div>
+                      <div className="text-sm font-medium">{weapon.name}</div>
                       <div className="text-xs text-zinc-400">
                         {activeSkin
                           ? activeSkin.name
@@ -209,7 +210,7 @@ export function OwnedSkinsGrid({
                                   sizes="12px"
                                 />
                               </div>
-                              {getSkinPrice(skin).toLocaleString()} VP
+                              <VpAmount amount={getSkinPrice(skin)} iconSize={10} />
                             </div>
                           </button>
                         );

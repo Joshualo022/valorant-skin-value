@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
+import { VpAmount } from "@/components/vp-amount";
 import type { FullOwnedSkin } from "@/app/collection/owned-skins-utils";
 
 function EditIcon({ className }: { className?: string }) {
@@ -91,7 +92,7 @@ export function FlexItemCard({
             <span className="font-display text-2xl font-bold text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.8)] sm:text-3xl">
               {activeFlexItem.name}
             </span>
-            <span className="text-sm text-zinc-300">{getSkinPrice(activeFlexItem).toLocaleString()} VP</span>
+            <VpAmount amount={getSkinPrice(activeFlexItem)} className="text-sm text-zinc-300" iconSize={14} />
           </div>
 
           {/* Big overlay on hover (desktop) */}

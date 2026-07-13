@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
 import { HeartButton } from "@/components/heart-button";
+import { VpAmount } from "@/components/vp-amount";
 
 export type LikedSkin = {
   skinId: string;
@@ -64,9 +65,11 @@ export function WishlistView({ likedSkins }: { likedSkins: LikedSkin[] }) {
             <div className="text-xs uppercase tracking-wide text-zinc-500">
               Total if purchased
             </div>
-            <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
-              {currentTotal.toLocaleString()} VP
-            </span>
+            <VpAmount
+              amount={currentTotal}
+              iconSize={20}
+              className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent"
+            />
           </div>
           <Link
             href="/catalog"
@@ -122,9 +125,7 @@ export function WishlistView({ likedSkins }: { likedSkins: LikedSkin[] }) {
                         sizes="14px"
                       />
                     </div>
-                    <span className={tier.text}>
-                      {getSkinPrice(skin).toLocaleString()} VP
-                    </span>
+                    <VpAmount amount={getSkinPrice(skin)} className={tier.text} iconSize={14} />
                   </div>
                 </Link>
                 <HeartButton

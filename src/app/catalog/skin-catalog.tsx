@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
 import { HeartButton } from "@/components/heart-button";
+import { VpAmount } from "@/components/vp-amount";
 
 type SkinSummary = {
   id: string;
@@ -309,11 +310,13 @@ export function SkinCatalog({
       <div className="sticky top-14 z-10 flex flex-col gap-3 border-b border-border-subtle/80 bg-background/90 py-3 backdrop-blur-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
         <h1 className="font-display text-xl font-bold">Skin Catalog</h1>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="text-lg font-medium">
-            Total value:{" "}
-            <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-transparent">
-              {totalValue.toLocaleString()} VP
-            </span>
+          <div className="flex items-center gap-1.5 text-lg font-medium">
+            Total value:
+            <VpAmount
+              amount={totalValue}
+              iconSize={16}
+              className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-transparent"
+            />
           </div>
           <Link
             href="/collection"
@@ -514,8 +517,9 @@ export function SkinCatalog({
                           sizes="14px"
                         />
                       </div>
-                      <span className={tier.text}>{skin.contentTier.name}</span> ·{" "}
-                      {getSkinPrice(skin).toLocaleString()} VP
+                      <span className={tier.text}>{skin.contentTier.name}</span>
+                      <span>·</span>
+                      <VpAmount amount={getSkinPrice(skin)} iconSize={14} />
                     </div>
                   </Link>
                   <button

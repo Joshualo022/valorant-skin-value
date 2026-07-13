@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
+import { VpAmount } from "@/components/vp-amount";
 import type { FullOwnedSkin } from "./owned-skins-utils";
 
 // Re-exported so the several files that already do
@@ -109,7 +110,7 @@ export function AllOwnedSkinsGrid({ allOwnedSkins }: { allOwnedSkins: FullOwnedS
                         sizes="14px"
                       />
                     </div>
-                    <span className={tier.text}>{getSkinPrice(skin).toLocaleString()} VP</span>
+                    <VpAmount amount={getSkinPrice(skin)} className={tier.text} iconSize={14} />
                   </div>
                   <div
                     className={

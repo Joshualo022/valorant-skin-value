@@ -1,16 +1,21 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
 import { isVerifiedReviewer } from "@/lib/incentives";
-import { SharePanel } from "./share-panel";
+import { VpAmount } from "@/components/vp-amount";
+import { SharePopover } from "./share-panel";
 import type { FullOwnedSkin } from "./all-owned-skins-grid";
 
 // Shared chrome for both /collection tabs — "All Owned" (the full list, with
 // per-weapon skin/chroma pickers) and "Loadout" (the in-game-style equipped
 // grid) are two views onto the same collection, not two separate features,
-// so they share one header, one value readout, and one share panel rather
-// than each page re-deriving its own.
+// so they share one header, one value readout, and one share entry point
+// rather than each page re-deriving its own.
+//
+// This is the editing surface's header — anything that configures
+// *presentation to others* (visibility, share link, flex item) lives behind
+// the Share button's popover (share-panel.tsx), not in the page body. The
+// value readout follows whichever tab is active rather than an extra toggle
+// of its own: one switcher (the tabs) instead of two adjacent ones
+// controlling nearly the same concept.
 export function CollectionHeader({
   activeTab,
   ownedCount,
@@ -40,7 +45,8 @@ export function CollectionHeader({
 }) {
   const progressPercent = ownedCount > 0 ? Math.round((reviewedCount / ownedCount) * 100) : 0;
   const verified = isVerifiedReviewer(reviewedCount);
-  const [valueView, setValueView] = useState<"collection" | "loadout">("collection");
+  const displayedValue = activeTab === "owned" ? collectionValue : loadoutValuation;
+  const valueLabel = activeTab === "owned" ? "Collection value" : "Loadout valuation";
 
   return (
     <>
@@ -70,30 +76,9 @@ export function CollectionHeader({
         <div className="flex flex-col items-start gap-3 sm:items-end">
           {ownedCount > 0 && (
             <div className="flex flex-col items-start gap-1.5 sm:items-end">
-              <div className="flex gap-1 rounded-full border border-border-subtle bg-surface-2 p-0.5 text-xs">
-                <button
-                  onClick={() => setValueView("collection")}
-                  className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
-                    valueView === "collection" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
-                  }`}
-                >
-                  Collection Value
-                </button>
-                <button
-                  onClick={() => setValueView("loadout")}
-                  className={`rounded-full px-2.5 py-1 font-semibold transition-colors ${
-                    valueView === "loadout" ? "bg-accent text-white" : "text-zinc-400 hover:text-foreground"
-                  }`}
-                >
-                  Loadout Valuation
-                </button>
-              </div>
-              <div className="text-left text-lg font-medium sm:text-right">
-                <span className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-2xl font-bold text-transparent">
-                  {(valueView === "collection" ? collectionValue : loadoutValuation).toLocaleString()} VP
-                </span>
-              </div>
-              {valueView === "loadout" && (
+              <span className="text-xs uppercase tracking-wide text-zinc-500">{valueLabel}</span>
+              <VpAmount amount={displayedValue} iconSize={22} className="text-2xl text-zinc-400" />
+              {activeTab === "loadout" && (
                 <p className="max-w-[240px] text-right text-[11px] leading-snug text-zinc-500">
                   Estimated from other owners&apos; value ratings for skins in your active loadout —
                   Select-tier weapon skins count as 0 since many are earned free via the Battlepass
@@ -102,12 +87,21 @@ export function CollectionHeader({
               )}
             </div>
           )}
-          <Link
-            href="/catalog"
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
-          >
-            + Add or edit skins
-          </Link>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <Link
+              href="/catalog"
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
+            >
+              + Add or edit skins
+            </Link>
+            <SharePopover
+              initialVisibility={collectionVisibility}
+              initialSlug={shareSlug}
+              origin={origin}
+              ownedSkins={ownedSkinsForFlexItem}
+              initialFlexItemSkinId={flexItemSkinId}
+            />
+          </div>
         </div>
       </div>
 
@@ -130,43 +124,30 @@ export function CollectionHeader({
         </Link>
       </div>
 
-      <SharePanel
-        initialVisibility={collectionVisibility}
-        initialSlug={shareSlug}
-        origin={origin}
-        ownedSkins={ownedSkinsForFlexItem}
-        initialFlexItemSkinId={flexItemSkinId}
-      />
-
-      <div className="flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <span className="text-zinc-300">
-            You&apos;ve reviewed <span className="font-semibold text-foreground">{reviewedCount}</span>{" "}
-            of <span className="font-semibold text-foreground">{ownedCount}</span> owned skins
-          </span>
-          {verified && (
-            <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
-              Verified Reviewer
-            </span>
-          )}
-        </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border-subtle bg-surface px-4 py-2.5 text-sm">
+        <div className="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-surface-2">
           <div
             className="h-full rounded-full bg-gradient-to-r from-accent to-accent-strong transition-all"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs text-zinc-500">{reviewedCount} verified reviews written</span>
-          {reviewedCount < ownedCount && (
-            <Link
-              href="/collection#all-owned"
-              className="shrink-0 rounded-full border border-accent/40 px-3 py-1 text-xs font-semibold text-accent transition-colors hover:bg-accent/10"
-            >
-              Review your skins →
-            </Link>
-          )}
-        </div>
+        <span className="text-zinc-300">
+          <span className="font-semibold text-foreground">{reviewedCount}</span>/
+          <span className="font-semibold text-foreground">{ownedCount}</span> reviewed
+        </span>
+        {verified && (
+          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
+            Verified Reviewer
+          </span>
+        )}
+        {reviewedCount < ownedCount && (
+          <Link
+            href="/collection#all-owned"
+            className="ml-auto shrink-0 rounded-full border border-accent/40 px-3 py-1 text-xs font-semibold text-accent transition-colors hover:bg-accent/10"
+          >
+            Review your skins →
+          </Link>
+        )}
       </div>
     </>
   );
