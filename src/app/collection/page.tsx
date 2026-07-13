@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { resolveDisplayName } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
 import {
   getOwnedSkinsWithValue,
@@ -86,6 +87,8 @@ export default async function MyCollectionPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-6">
       <CollectionHeader
         activeTab="owned"
+        displayName={resolveDisplayName(user)}
+        avatarId={user.avatarId}
         ownedCount={allOwnedSkins.length}
         collectionValue={totalValue}
         loadoutValuation={loadoutValuation}

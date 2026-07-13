@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { isVerifiedReviewer } from "@/lib/incentives";
 import { VpAmount } from "@/components/vp-amount";
+import { Avatar } from "@/components/avatar";
 import { SharePopover } from "./share-panel";
 import type { FullOwnedSkin } from "./all-owned-skins-grid";
 
@@ -18,6 +19,8 @@ import type { FullOwnedSkin } from "./all-owned-skins-grid";
 // controlling nearly the same concept.
 export function CollectionHeader({
   activeTab,
+  displayName,
+  avatarId,
   ownedCount,
   collectionValue,
   loadoutValuation,
@@ -31,6 +34,8 @@ export function CollectionHeader({
   flexItemSkinId,
 }: {
   activeTab: "owned" | "loadout";
+  displayName: string;
+  avatarId: string | null;
   ownedCount: number;
   collectionValue: number;
   loadoutValuation: number;
@@ -52,9 +57,7 @@ export function CollectionHeader({
     <>
       <div className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong font-display text-lg font-bold text-white">
-            {ownedCount}
-          </div>
+          <Avatar avatarId={avatarId} displayName={displayName} size="lg" />
           <div className="flex flex-col">
             <h1 className="font-display text-xl font-bold">My Collection</h1>
             <span className="text-sm text-zinc-400">

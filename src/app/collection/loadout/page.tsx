@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
+import { resolveDisplayName } from "@/lib/user";
 import {
   getOwnedSkinsWithValue,
   getLoadoutValuation,
@@ -39,6 +40,8 @@ export default async function CollectionLoadoutPage() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-6">
       <CollectionHeader
         activeTab="loadout"
+        displayName={resolveDisplayName(user)}
+        avatarId={user.avatarId}
         ownedCount={ownedSkins.length}
         collectionValue={totalValue}
         loadoutValuation={loadoutValuation}

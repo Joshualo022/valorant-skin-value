@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { getSharedCollectionBySlug } from "@/lib/collection";
 
 export const alt = "Valorant Skin Value — profile";
@@ -32,9 +34,19 @@ function DomainTag() {
   );
 }
 
+// Node.js runtime (the default here, since this file doesn't opt into the
+// edge runtime) can read /public straight off disk — see the "Using Node.js
+// runtime with local assets" pattern in Next's own opengraph-image docs.
+// Same static asset VpAmount uses client-side; Satori just needs it as a
+// data URI instead of a next/image src.
+async function loadVpIconDataUri(): Promise<string> {
+  const bytes = await readFile(join(process.cwd(), "public", "vp-icon.png"), "base64");
+  return `data:image/png;base64,${bytes}`;
+}
+
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const shared = await getSharedCollectionBySlug(slug);
+  const [shared, vpIconSrc] = await Promise.all([getSharedCollectionBySlug(slug), loadVpIconDataUri()]);
 
   // Falls back to a bare wordmark card if the link was revoked between a
   // platform crawling it and someone actually clicking it, or if this
@@ -146,22 +158,29 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         >
           {displayName}&apos;s Collection
         </div>
+        <div style={{ display: "flex", fontSize: 30, color: MUTED, marginTop: 14 }}>
+          See my collection and reviews →
+        </div>
 
         <div style={{ display: "flex", gap: 64, marginTop: "auto" }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ display: "flex", fontSize: 22, color: MUTED, textTransform: "uppercase" }}>
               Collection value
             </span>
-            <span style={{ display: "flex", fontSize: 44, fontWeight: 700, color: FOREGROUND }}>
-              {totalValue.toLocaleString()} VP
+            <span style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 44, fontWeight: 700, color: FOREGROUND }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- next/og's Satori renderer needs a plain <img>, not next/image */}
+              <img src={vpIconSrc} alt="" width={38} height={38} />
+              {totalValue.toLocaleString()}
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ display: "flex", fontSize: 22, color: MUTED, textTransform: "uppercase" }}>
               Loadout valuation
             </span>
-            <span style={{ display: "flex", fontSize: 44, fontWeight: 700, color: FOREGROUND }}>
-              {loadoutValuation.toLocaleString()} VP
+            <span style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 44, fontWeight: 700, color: FOREGROUND }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- next/og's Satori renderer needs a plain <img>, not next/image */}
+              <img src={vpIconSrc} alt="" width={38} height={38} />
+              {loadoutValuation.toLocaleString()}
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
