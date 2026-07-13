@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/relative-time";
+import { Avatar } from "@/components/avatar";
 
 type FeedSource = "review" | "collection_add" | "loadout_equip";
 
@@ -12,6 +13,7 @@ type FeedItem = {
   source: FeedSource;
   actorId: string;
   actorDisplayName: string;
+  actorAvatarId: string | null;
   actorHref: string | null;
   skinName: string;
   skinImageUrl: string;
@@ -118,18 +120,21 @@ export function FeedList({
                 <Image src={item.skinImageUrl} alt={item.skinName} fill className="object-contain p-1" sizes="56px" />
               </Link>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <p className="text-sm text-foreground">
-                  {item.actorHref ? (
-                    <Link href={item.actorHref} className="font-semibold hover:underline">
-                      {item.actorDisplayName}
+                <div className="flex items-center gap-1.5">
+                  <Avatar avatarId={item.actorAvatarId} displayName={item.actorDisplayName} size="xs" />
+                  <p className="min-w-0 text-sm text-foreground">
+                    {item.actorHref ? (
+                      <Link href={item.actorHref} className="font-semibold hover:underline">
+                        {item.actorDisplayName}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold">{item.actorDisplayName}</span>
+                    )}{" "}
+                    <Link href={item.href} className="hover:underline">
+                      {item.text}
                     </Link>
-                  ) : (
-                    <span className="font-semibold">{item.actorDisplayName}</span>
-                  )}{" "}
-                  <Link href={item.href} className="hover:underline">
-                    {item.text}
-                  </Link>
-                </p>
+                  </p>
+                </div>
                 {item.reviewTextPreview && (
                   <Link href={item.href} className="block truncate text-xs text-zinc-400">
                     &ldquo;{item.reviewTextPreview}&rdquo;
@@ -150,6 +155,7 @@ export function FeedList({
         const text = slimText(item.source, count, item.text);
         return (
           <div key={key} className="flex items-center gap-1.5 border-b border-border-subtle/40 px-1 py-2 text-xs">
+            <Avatar avatarId={item.actorAvatarId} displayName={item.actorDisplayName} size="xs" />
             {item.actorHref ? (
               <Link href={item.actorHref} className="shrink-0 font-semibold text-zinc-300 hover:underline">
                 {item.actorDisplayName}

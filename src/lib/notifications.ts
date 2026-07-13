@@ -46,6 +46,7 @@ export type NotificationForList = {
   // message is just the suffix ("liked your review", "followed you", …) and
   // links to href — same split as FeedItem (see lib/feed.ts).
   fromUserDisplayName: string;
+  fromUserAvatarId: string | null;
   fromUserHref: string | null;
   message: string;
   href: string | null;
@@ -85,6 +86,7 @@ export async function getNotificationsForUser(
             displayName: true,
             email: true,
             collectionShareSlug: true,
+            avatarId: true,
           },
         },
       },
@@ -109,6 +111,7 @@ export async function getNotificationsForUser(
 
   const notifications: NotificationForList[] = rows.map((n) => {
     const fromUserDisplayName = resolveDisplayName(n.fromUser);
+    const fromUserAvatarId = n.fromUser.avatarId;
     // /u/:slug resolves for everyone with a slug regardless of visibility
     // (see lib/share-slug.ts), so this no longer needs the collectionVisibility
     // check the old /collection/:slug link required.
@@ -123,6 +126,7 @@ export async function getNotificationsForUser(
         read: n.read,
         createdAt: n.createdAt.toISOString(),
         fromUserDisplayName,
+        fromUserAvatarId,
         fromUserHref,
         message: review ? `${verb} your ${review.skin.name} review` : `${verb} your review`,
         // Reviews get id="review-[id]" on the skin page (see review-list.tsx)
@@ -139,6 +143,7 @@ export async function getNotificationsForUser(
         read: n.read,
         createdAt: n.createdAt.toISOString(),
         fromUserDisplayName,
+        fromUserAvatarId,
         fromUserHref,
         message: "appreciated your collection ⭐",
         href: ownHref,
@@ -152,6 +157,7 @@ export async function getNotificationsForUser(
       read: n.read,
       createdAt: n.createdAt.toISOString(),
       fromUserDisplayName,
+      fromUserAvatarId,
       fromUserHref,
       message: "followed you",
       href: fromUserHref,

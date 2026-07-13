@@ -175,6 +175,7 @@ export default async function SkinDetailPage({
             id: review.id,
             reviewerName: resolveDisplayName(review.user),
             reviewerSlug: review.user.collectionShareSlug,
+            reviewerAvatarId: review.user.avatarId,
             isVerifiedReviewer: isVerifiedReviewer(review.user._count.reviews),
             isEarliestReview: review.id === earliestReviewId,
             qualityScore: review.qualityScore,

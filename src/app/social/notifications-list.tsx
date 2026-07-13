@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/relative-time";
+import { Avatar } from "@/components/avatar";
 
 type NotificationCursor = { createdAt: string; id: string };
 
@@ -12,6 +13,7 @@ type NotificationItem = {
   read: boolean;
   createdAt: string;
   fromUserDisplayName: string;
+  fromUserAvatarId: string | null;
   fromUserHref: string | null;
   message: string;
   href: string | null;
@@ -115,10 +117,12 @@ export function NotificationsList({
         // two sibling Links rather than one wrapping the row.
         <div
           key={n.id}
-          className={`rounded-xl px-3 py-2.5 text-sm transition-colors ${
+          className={`flex items-start gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors ${
             n.read ? "text-zinc-300" : "bg-accent/10 text-foreground"
           }`}
         >
+          <Avatar avatarId={n.fromUserAvatarId} displayName={n.fromUserDisplayName} size="xs" />
+          <div>
           <p>
             {n.fromUserHref ? (
               <Link href={n.fromUserHref} className="font-semibold hover:underline">
@@ -136,6 +140,7 @@ export function NotificationsList({
             )}
           </p>
           <p className="mt-0.5 text-xs text-zinc-500">{formatRelativeTime(new Date(n.createdAt))}</p>
+          </div>
         </div>
       ))}
 

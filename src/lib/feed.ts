@@ -25,6 +25,7 @@ export type FeedItem = {
   // source) collapse into one row. Not used for anything else.
   actorId: string;
   actorDisplayName: string;
+  actorAvatarId: string | null;
   // Separate from href below: the actor's name links to their profile, the
   // rest of the card links to the thing they did (a review or collection).
   // null only for the rare stale actor who signed up before slugs existed
@@ -149,7 +150,7 @@ export async function getFeedPage(
     prisma.skin.findMany({ where: { id: { in: skinIds } }, select: { id: true, name: true, imageUrl: true } }),
     prisma.user.findMany({
       where: { id: { in: actorIds } },
-      select: { id: true, displayName: true, email: true, collectionShareSlug: true },
+      select: { id: true, displayName: true, email: true, collectionShareSlug: true, avatarId: true },
     }),
   ]);
   const skinById = new Map(skins.map((s) => [s.id, s]));
@@ -182,6 +183,7 @@ export async function getFeedPage(
         source: row.source,
         actorId: row.actorId,
         actorDisplayName,
+        actorAvatarId: actor.avatarId,
         actorHref,
         skinName: skin.name,
         skinImageUrl: skin.imageUrl,

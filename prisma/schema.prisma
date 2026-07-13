@@ -30,6 +30,12 @@ model User {
   // Replaces the old binary share on/off — see /api/me/visibility. Default
   // PRIVATE keeps existing users' collections closed until they opt in.
   collectionVisibility CollectionVisibility @default(PRIVATE) @map("collection_visibility")
+  // One of the 30 curated "{character}-{color}" combos (see src/lib/avatars.ts),
+  // e.g. "prism-gold" — never a user-uploaded image (see AVATAR_SPEC.md).
+  // Null (the default for every existing user) falls back to the generated
+  // letter avatar; validated against the known set on write, not by a DB
+  // constraint, so adding a 31st avatar later never needs a migration.
+  avatarId String? @map("avatar_id")
 
   ownedSkins     UserOwnedSkin[]
   activeLoadouts ActiveLoadout[]

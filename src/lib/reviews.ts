@@ -68,7 +68,13 @@ export async function getReviewsForSkin(skinId: string, viewerId?: string) {
     where: { skinId },
     include: {
       user: {
-        select: { displayName: true, email: true, collectionShareSlug: true, _count: { select: { reviews: true } } },
+        select: {
+          displayName: true,
+          email: true,
+          collectionShareSlug: true,
+          avatarId: true,
+          _count: { select: { reviews: true } },
+        },
       },
       tags: true,
       _count: { select: { likes: true } },

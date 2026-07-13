@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Avatar } from "@/components/avatar";
 import type { FollowListCursor, FollowListItem } from "@/lib/follows";
 
 const FOLLOW_BASE_CLASSES =
@@ -9,14 +10,6 @@ const FOLLOW_BASE_CLASSES =
 const FOLLOWING_CLASSES = "border-border-subtle text-zinc-300 hover:border-red-500/50 hover:text-red-400";
 const NOT_FOLLOWING_CLASSES =
   "border-transparent bg-gradient-to-r from-accent to-accent-strong text-white hover:brightness-110";
-
-function RowAvatar({ name }: { name: string }) {
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-sm font-bold text-white">
-      {name[0]?.toUpperCase() ?? "?"}
-    </div>
-  );
-}
 
 // Infinite-scroll list, same sentinel/IntersectionObserver pattern as
 // FeedList (see src/app/feed/feed-list.tsx). Each row's Follow/Unfollow
@@ -129,12 +122,12 @@ export function FollowList({
           >
             {item.slug ? (
               <Link href={`/u/${item.slug}`} className="flex min-w-0 items-center gap-3">
-                <RowAvatar name={item.displayName} />
+                <Avatar avatarId={item.avatarId} displayName={item.displayName} size="md" />
                 <span className="truncate text-sm font-semibold hover:underline">{item.displayName}</span>
               </Link>
             ) : (
               <div className="flex min-w-0 items-center gap-3">
-                <RowAvatar name={item.displayName} />
+                <Avatar avatarId={item.avatarId} displayName={item.displayName} size="md" />
                 <span className="truncate text-sm font-semibold">{item.displayName}</span>
               </div>
             )}

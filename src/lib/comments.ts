@@ -18,6 +18,7 @@ export type CommentForList = {
   authorId: string;
   authorName: string;
   authorSlug: string | null;
+  authorAvatarId: string | null;
   isReviewAuthor: boolean;
   body: string;
   createdAt: string;
@@ -41,7 +42,9 @@ export async function getCommentsForReviews(
 
   const comments = await prisma.comment.findMany({
     where: { reviewId: { in: reviewIds }, deletedAt: null },
-    include: { user: { select: { displayName: true, email: true, collectionShareSlug: true } } },
+    include: {
+      user: { select: { displayName: true, email: true, collectionShareSlug: true, avatarId: true } },
+    },
     orderBy: { createdAt: "asc" },
   });
 
@@ -56,6 +59,7 @@ export async function getCommentsForReviews(
       authorId: comment.userId,
       authorName: resolveDisplayName(comment.user),
       authorSlug: comment.user.collectionShareSlug,
+      authorAvatarId: comment.user.avatarId,
       isReviewAuthor: comment.userId === review.userId,
       body: comment.body,
       createdAt: comment.createdAt.toISOString(),

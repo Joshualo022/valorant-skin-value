@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { Avatar } from "@/components/avatar";
 import type { CommentForList } from "@/lib/comments";
 
 const MAX_LENGTH = 750;
@@ -96,9 +97,7 @@ export function CommentThread({
         <div className="flex flex-col gap-3 pl-1">
           {comments.map((comment) => (
             <div key={comment.id} className="flex gap-2 text-xs">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[10px] font-bold text-zinc-300">
-                {comment.authorName[0]?.toUpperCase() ?? "?"}
-              </div>
+              <Avatar avatarId={comment.authorAvatarId} displayName={comment.authorName} size="xs" />
               <div className="flex flex-1 flex-col gap-0.5">
                 <div className="flex flex-wrap items-center gap-1.5">
                   {comment.authorSlug ? (

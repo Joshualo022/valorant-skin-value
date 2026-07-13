@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { HeartButton } from "@/components/heart-button";
+import { Avatar } from "@/components/avatar";
 import { REVIEW_TAG_LABELS, type ReviewTagValue } from "@/lib/review-tags";
 import { CommentThread } from "./comment-thread";
 import type { CommentForList } from "@/lib/comments";
@@ -11,6 +12,7 @@ export type ReviewForList = {
   id: string;
   reviewerName: string;
   reviewerSlug: string | null;
+  reviewerAvatarId: string | null;
   isVerifiedReviewer: boolean;
   isEarliestReview: boolean;
   qualityScore: number;
@@ -122,9 +124,7 @@ export function ReviewList({
             id={`review-${review.id}`}
             className="flex scroll-mt-20 gap-3 rounded-2xl border border-border-subtle bg-surface p-4"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-sm font-bold text-white">
-              {review.reviewerName[0]?.toUpperCase() ?? "?"}
-            </div>
+            <Avatar avatarId={review.reviewerAvatarId} displayName={review.reviewerName} size="md" />
             <div className="flex flex-1 flex-col gap-1.5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-1.5">

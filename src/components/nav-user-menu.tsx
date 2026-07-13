@@ -3,15 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
+import { Avatar } from "@/components/avatar";
 
 export function NavUserMenu({
   displayName,
   email,
   profileSlug,
+  avatarId,
 }: {
   displayName: string;
   email: string;
   profileSlug: string | null;
+  avatarId: string | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -22,9 +25,9 @@ export function NavUserMenu({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label="Profile menu"
-        className="ml-1 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white"
+        className="ml-1 cursor-pointer"
       >
-        {displayName[0]?.toUpperCase() ?? "?"}
+        <Avatar avatarId={avatarId} displayName={displayName} size="sm" />
       </button>
 
       {open && (

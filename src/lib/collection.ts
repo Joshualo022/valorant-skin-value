@@ -127,9 +127,9 @@ export type CollectionAccess = {
   // unless they're the owner, in which case the page renders a private-state
   // message instead.
   canView: boolean;
-  // Just an image URL, shown as the profile header avatar regardless of
-  // visibility — not part of the gated collection content itself.
-  flexItemImageUrl: string | null;
+  // Drives the profile header Avatar — shown regardless of visibility, not
+  // part of the gated collection content itself.
+  avatarId: string | null;
 };
 
 // A cheap, slug-only lookup used to decide *whether* to render the full
@@ -147,7 +147,7 @@ export async function getCollectionAccess(
       displayName: true,
       email: true,
       collectionVisibility: true,
-      flexItemSkin: { select: { imageUrl: true } },
+      avatarId: true,
       _count: { select: { followers: true, following: true, appraisalsReceived: true } },
     },
   });
@@ -179,7 +179,7 @@ export async function getCollectionAccess(
     isAppraised,
     isOwner,
     canView,
-    flexItemImageUrl: user.flexItemSkin?.imageUrl ?? null,
+    avatarId: user.avatarId,
   };
 }
 

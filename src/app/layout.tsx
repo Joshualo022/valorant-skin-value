@@ -127,6 +127,7 @@ export default async function RootLayout({
                     displayName={resolveDisplayName(user)}
                     email={user.email}
                     profileSlug={user.collectionShareSlug}
+                    avatarId={user.avatarId}
                   />
                 </>
               ) : (

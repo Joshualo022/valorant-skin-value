@@ -7,6 +7,7 @@ export type FollowListItem = {
   id: string;
   displayName: string;
   slug: string | null;
+  avatarId: string | null;
   isFollowedByViewer: boolean;
 };
 
@@ -17,7 +18,13 @@ export type FollowListPage = {
 
 const PAGE_SIZE = 30;
 
-type UserSelect = { id: string; displayName: string | null; email: string; collectionShareSlug: string | null };
+type UserSelect = {
+  id: string;
+  displayName: string | null;
+  email: string;
+  collectionShareSlug: string | null;
+  avatarId: string | null;
+};
 
 // Same keyset-pagination shape as getFeedPage (see lib/feed.ts), just over
 // the follows table directly instead of a UNION — createdAt alone isn't a
@@ -54,6 +61,7 @@ async function toPage(
     id: r.user.id,
     displayName: resolveDisplayName(r.user),
     slug: r.user.collectionShareSlug,
+    avatarId: r.user.avatarId,
     isFollowedByViewer: followedSet.has(r.user.id),
   }));
 
@@ -75,7 +83,9 @@ export async function getFollowers(
     select: {
       id: true,
       createdAt: true,
-      follower: { select: { id: true, displayName: true, email: true, collectionShareSlug: true } },
+      follower: {
+        select: { id: true, displayName: true, email: true, collectionShareSlug: true, avatarId: true },
+      },
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: PAGE_SIZE,
@@ -96,7 +106,9 @@ export async function getFollowing(
     select: {
       id: true,
       createdAt: true,
-      following: { select: { id: true, displayName: true, email: true, collectionShareSlug: true } },
+      following: {
+        select: { id: true, displayName: true, email: true, collectionShareSlug: true, avatarId: true },
+      },
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: PAGE_SIZE,

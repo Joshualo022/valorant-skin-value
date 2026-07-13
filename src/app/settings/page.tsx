@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveDisplayName } from "@/lib/user";
 import { DisplayNameForm } from "./display-name-form";
 import { GoogleLinkSection } from "./google-link-section";
+import { AvatarPicker } from "./avatar-picker";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
@@ -23,6 +24,11 @@ export default async function SettingsPage() {
         <p className="text-sm text-zinc-400">
           {reviewCount} review{reviewCount === 1 ? "" : "s"} written
         </p>
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Avatar</h2>
+        <AvatarPicker displayName={resolveDisplayName(user)} initialAvatarId={user.avatarId} />
       </section>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface p-4">
