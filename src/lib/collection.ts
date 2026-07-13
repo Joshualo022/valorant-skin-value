@@ -118,6 +118,7 @@ export type CollectionAccess = {
   displayName: string;
   visibility: "PRIVATE" | "LINK";
   followerCount: number;
+  followingCount: number;
   isFollowing: boolean;
   appraisalCount: number;
   isAppraised: boolean;
@@ -147,7 +148,7 @@ export async function getCollectionAccess(
       email: true,
       collectionVisibility: true,
       flexItemSkin: { select: { imageUrl: true } },
-      _count: { select: { followers: true, appraisalsReceived: true } },
+      _count: { select: { followers: true, following: true, appraisalsReceived: true } },
     },
   });
   if (!user) return null;
@@ -172,6 +173,7 @@ export async function getCollectionAccess(
     displayName: resolveDisplayName(user),
     visibility: user.collectionVisibility,
     followerCount: user._count.followers,
+    followingCount: user._count.following,
     isFollowing,
     appraisalCount: user._count.appraisalsReceived,
     isAppraised,

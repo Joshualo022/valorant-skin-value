@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getCollectionAccess, getSharedCollectionBySlug } from "@/lib/collection";
+import { getCollectionAccess, getSharedCollectionBySlug, getOwnedSkinsWithValue } from "@/lib/collection";
 import { getCurrentUser } from "@/lib/auth";
 import { getSkinPrice } from "@/lib/pricing";
 import { getTierStyle } from "@/lib/tier-style";
+import { toFullOwnedSkins, type FullOwnedSkin } from "../../collection/owned-skins-utils";
 import { LoadoutGrid } from "../../collection/loadout/loadout-grid";
 import { FollowButton } from "./follow-button";
 import { AppraisalButton } from "./appraisal-button";
+import { FlexItemCard } from "./flex-item-card";
 
 export async function generateMetadata({
   params,
@@ -39,6 +41,7 @@ export default async function ProfilePage({
     ownerId,
     displayName,
     followerCount,
+    followingCount,
     isFollowing,
     appraisalCount,
     isAppraised,
@@ -46,6 +49,12 @@ export default async function ProfilePage({
     canView,
     flexItemImageUrl,
   } = access;
+
+  // Only fetched for the owner's own view — the flex item picker needs the
+  // full owned-skins list, which a visitor never needs paid for.
+  const ownedSkinsForPicker = isOwner
+    ? toFullOwnedSkins((await getOwnedSkinsWithValue(ownerId)).ownedSkins, new Set())
+    : [];
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
@@ -66,25 +75,47 @@ export default async function ProfilePage({
             {followerCount === 1 ? "" : "s"}
           </Link>
           <Link href={`/u/${slug}/following`} className="text-zinc-300 hover:text-foreground">
-            following
+            <span className="font-semibold text-foreground">{followingCount}</span> following
           </Link>
         </div>
-        {!isOwner && (
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-            <FollowButton
-              targetUserId={ownerId}
-              isLoggedIn={!!viewer}
-              initialFollowing={isFollowing}
-              initialFollowerCount={followerCount}
-            />
-            <AppraisalButton
-              targetUserId={ownerId}
-              isLoggedIn={!!viewer}
-              initialAppraised={isAppraised}
-              initialAppraisalCount={appraisalCount}
-            />
-          </div>
-        )}
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+          {isOwner ? (
+            <Link
+              href="/collection"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-accent-strong px-4 py-2 text-sm font-semibold text-white transition-transform hover:scale-105"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 9.5 12 3l9 6.5" />
+                <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
+              </svg>
+              My Collection
+            </Link>
+          ) : (
+            <>
+              <FollowButton
+                targetUserId={ownerId}
+                isLoggedIn={!!viewer}
+                initialFollowing={isFollowing}
+                initialFollowerCount={followerCount}
+              />
+              <AppraisalButton
+                targetUserId={ownerId}
+                isLoggedIn={!!viewer}
+                initialAppraised={isAppraised}
+                initialAppraisalCount={appraisalCount}
+              />
+            </>
+          )}
+        </div>
       </div>
 
       {!canView ? (
@@ -93,13 +124,21 @@ export default async function ProfilePage({
           <p className="text-sm text-zinc-400">{displayName} hasn&apos;t made their collection visible to others.</p>
         </div>
       ) : (
-        <ProfileCollection slug={slug} />
+        <ProfileCollection slug={slug} isOwner={isOwner} ownedSkinsForPicker={ownedSkinsForPicker} />
       )}
     </div>
   );
 }
 
-async function ProfileCollection({ slug }: { slug: string }) {
+async function ProfileCollection({
+  slug,
+  isOwner,
+  ownedSkinsForPicker,
+}: {
+  slug: string;
+  isOwner: boolean;
+  ownedSkinsForPicker: FullOwnedSkin[];
+}) {
   const shared = await getSharedCollectionBySlug(slug);
   if (!shared) notFound();
 
@@ -109,28 +148,33 @@ async function ProfileCollection({ slug }: { slug: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {flexItem && flexTier && (
-        <div
-          className={`relative flex min-h-[220px] items-end overflow-hidden rounded-2xl border border-border-subtle bg-gradient-to-br ${flexTier.gradient} p-6 sm:min-h-[280px]`}
-        >
-          <div className="absolute inset-0 bg-black/55" />
-          <Image
-            src={flexItem.imageUrl}
-            alt={flexItem.name}
-            fill
-            className="object-contain object-right p-4 opacity-90 sm:p-2"
-            sizes="800px"
-          />
-          <div className="relative z-10 flex flex-col gap-0.5">
-            <span className={`text-xs font-semibold uppercase tracking-wide ${flexTier.text}`}>
-              Flex Item · {flexItem.contentTier.name}
-            </span>
-            <span className="font-display text-2xl font-bold text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.8)] sm:text-3xl">
-              {flexItem.name}
-            </span>
-            <span className="text-sm text-zinc-300">{getSkinPrice(flexItem).toLocaleString()} VP</span>
+      {isOwner ? (
+        <FlexItemCard ownedSkins={ownedSkinsForPicker} initialFlexItemSkinId={flexItem?.id ?? null} />
+      ) : (
+        flexItem &&
+        flexTier && (
+          <div
+            className={`relative flex min-h-[220px] items-end overflow-hidden rounded-2xl border border-border-subtle bg-gradient-to-br ${flexTier.gradient} p-6 sm:min-h-[280px]`}
+          >
+            <div className="absolute inset-0 bg-black/55" />
+            <Image
+              src={flexItem.imageUrl}
+              alt={flexItem.name}
+              fill
+              className="object-contain object-right p-4 opacity-90 sm:p-2"
+              sizes="800px"
+            />
+            <div className="relative z-10 flex flex-col gap-0.5">
+              <span className={`text-xs font-semibold uppercase tracking-wide ${flexTier.text}`}>
+                Flex Item · {flexItem.contentTier.name}
+              </span>
+              <span className="font-display text-2xl font-bold text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.8)] sm:text-3xl">
+                {flexItem.name}
+              </span>
+              <span className="text-sm text-zinc-300">{getSkinPrice(flexItem).toLocaleString()} VP</span>
+            </div>
           </div>
-        </div>
+        )
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">

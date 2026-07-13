@@ -17,9 +17,9 @@ type NotificationItem = {
   href: string | null;
 };
 
-// Full browsable history — same row shape as the bell dropdown preview (see
-// notification-bell.tsx) but paginated, and marks whatever's currently
-// loaded as read as soon as it lands rather than waiting for a click, since
+// Full browsable, paginated notification history — the only place
+// notifications are surfaced now that the header bell has been removed.
+// Marks whatever's currently loaded as read as soon as it lands, since
 // arriving on this tab already *is* "opening" it.
 export function NotificationsList({
   initialItems,
