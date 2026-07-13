@@ -1,22 +1,24 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { resolveDisplayName } from "@/lib/user";
+import { getCurrentUser } from "@/lib/auth";
+import { getFollowers, type FollowListCursor } from "@/lib/follows";
 
 // Public — who follows this user. No auth required, same as follower counts
-// shown on share pages.
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ userId: string }> }
-) {
+// shown on profile pages. Cursor-paginated; the viewer's own follow status
+// per row is mixed in when logged in so list rows can show Follow/Unfollow.
+export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
+  const viewer = await getCurrentUser();
 
-  const follows = await prisma.follow.findMany({
-    where: { followingId: userId },
-    select: { follower: { select: { id: true, displayName: true, email: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+  const cursorParam = new URL(request.url).searchParams.get("cursor");
+  let cursor: FollowListCursor | null = null;
+  if (cursorParam) {
+    try {
+      cursor = JSON.parse(cursorParam);
+    } catch {
+      return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
+    }
+  }
 
-  return NextResponse.json(
-    follows.map(({ follower }) => ({ id: follower.id, displayName: resolveDisplayName(follower) }))
-  );
+  const page = await getFollowers(userId, { cursor, viewerId: viewer?.id });
+  return NextResponse.json(page);
 }

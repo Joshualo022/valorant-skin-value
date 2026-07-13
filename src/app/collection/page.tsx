@@ -8,6 +8,7 @@ import {
   getLoadoutValuation,
   getCollectionProgress,
   getReviewedSkinIds,
+  getFollowCounts,
 } from "@/lib/collection";
 import { WEAPON_TYPE_LABELS, compareWeapons } from "@/lib/weapon-order";
 import { CollectionHeader } from "./collection-header";
@@ -34,6 +35,7 @@ export default async function MyCollectionPage() {
     activeLoadouts,
     { reviewedCount },
     reviewedSkinIds,
+    { followerCount, followingCount },
   ] = await Promise.all([
     prisma.weapon.findMany(),
     getOwnedSkinsWithValue(user.id),
@@ -41,6 +43,7 @@ export default async function MyCollectionPage() {
     prisma.activeLoadout.findMany({ where: { userId: user.id } }),
     getCollectionProgress(user.id),
     getReviewedSkinIds(user.id),
+    getFollowCounts(user.id),
   ]);
 
   const allOwnedSkins = toFullOwnedSkins(ownedSkins, reviewedSkinIds);
@@ -89,6 +92,8 @@ export default async function MyCollectionPage() {
         reviewedCount={reviewedCount}
         collectionVisibility={user.collectionVisibility}
         shareSlug={user.collectionShareSlug}
+        followerCount={followerCount}
+        followingCount={followingCount}
         origin={origin}
         ownedSkinsForFlexItem={allOwnedSkins}
         flexItemSkinId={user.flexItemSkinId}

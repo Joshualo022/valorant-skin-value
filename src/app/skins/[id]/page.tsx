@@ -168,6 +168,7 @@ export default async function SkinDetailPage({
           reviews={reviews.map((review) => ({
             id: review.id,
             reviewerName: resolveDisplayName(review.user),
+            reviewerSlug: review.user.collectionShareSlug,
             isVerifiedReviewer: isVerifiedReviewer(review.user._count.reviews),
             isEarliestReview: review.id === earliestReviewId,
             qualityScore: review.qualityScore,

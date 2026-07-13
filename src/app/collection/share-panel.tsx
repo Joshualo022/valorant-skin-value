@@ -36,7 +36,7 @@ export function SharePanel({
   const [flexItemSkinId, setFlexItemSkinId] = useState(initialFlexItemSkinId);
   const [flexItemPending, setFlexItemPending] = useState<string | null>(null);
 
-  const shareUrl = slug ? `${origin}/collection/${slug}` : null;
+  const shareUrl = slug ? `${origin}/u/${slug}` : null;
 
   async function selectVisibility(next: Visibility) {
     if (next === visibility) return;

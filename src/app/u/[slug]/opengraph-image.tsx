@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { getSharedCollectionBySlug } from "@/lib/collection";
 
-export const alt = "Valorant Skin Value — shared collection";
+export const alt = "Valorant Skin Value — profile";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -37,7 +37,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const shared = await getSharedCollectionBySlug(slug);
 
   // Falls back to a bare wordmark card if the link was revoked between a
-  // platform crawling it and someone actually clicking it.
+  // platform crawling it and someone actually clicking it, or if this
+  // profile's collection is private.
   if (!shared) {
     return new ImageResponse(
       (

@@ -21,6 +21,11 @@ export type FeedItem = {
   id: string;
   source: FeedSource;
   actorDisplayName: string;
+  // Separate from href below: the actor's name links to their profile, the
+  // rest of the card links to the thing they did (a review or collection).
+  // null only for the rare stale actor who signed up before slugs existed
+  // and hasn't logged back in since (see lib/share-slug.ts).
+  actorHref: string | null;
   skinName: string;
   skinImageUrl: string;
   occurredAt: string;
@@ -104,14 +109,16 @@ async function queryFeedRows(
 
 const REVIEW_PREVIEW_LENGTH = 140;
 
-function feedText(source: FeedSource, actorName: string, skinName: string, qualityScore: number | null): string {
+// Suffix only, not the full sentence — the actor's name is rendered
+// separately (as a Link to their profile) by the caller, e.g. FeedList.
+function feedText(source: FeedSource, skinName: string, qualityScore: number | null): string {
   switch (source) {
     case "review":
-      return `${actorName} rated the ${skinName} ${qualityScore}/10`;
+      return `rated the ${skinName} ${qualityScore}/10`;
     case "collection_add":
-      return `${actorName} added the ${skinName} to their collection`;
+      return `added the ${skinName} to their collection`;
     case "loadout_equip":
-      return `${actorName} equipped the ${skinName}`;
+      return `equipped the ${skinName}`;
   }
 }
 
@@ -138,7 +145,7 @@ export async function getFeedPage(
     prisma.skin.findMany({ where: { id: { in: skinIds } }, select: { id: true, name: true, imageUrl: true } }),
     prisma.user.findMany({
       where: { id: { in: actorIds } },
-      select: { id: true, displayName: true, email: true, collectionVisibility: true, collectionShareSlug: true },
+      select: { id: true, displayName: true, email: true, collectionShareSlug: true },
     }),
   ]);
   const skinById = new Map(skins.map((s) => [s.id, s]));
@@ -150,7 +157,8 @@ export async function getFeedPage(
     if (!skin || !actor) return [];
 
     const actorDisplayName = resolveDisplayName(actor);
-    const text = feedText(row.source, actorDisplayName, skin.name, row.qualityScore);
+    const actorHref = actor.collectionShareSlug ? `/u/${actor.collectionShareSlug}` : null;
+    const text = feedText(row.source, skin.name, row.qualityScore);
     const reviewTextPreview =
       row.source === "review" && row.reviewText
         ? row.reviewText.length > REVIEW_PREVIEW_LENGTH
@@ -158,18 +166,18 @@ export async function getFeedPage(
           : row.reviewText
         : null;
 
+    // /u/:slug now resolves and handles PRIVATE gracefully on its own, so
+    // this no longer needs to branch on collectionVisibility the way the old
+    // /collection/:slug link did.
     const href =
-      row.source === "review"
-        ? `/skins/${skin.id}#review-${row.sortId}`
-        : actor.collectionVisibility !== "PRIVATE" && actor.collectionShareSlug
-          ? `/collection/${actor.collectionShareSlug}`
-          : `/skins/${skin.id}`;
+      row.source === "review" ? `/skins/${skin.id}#review-${row.sortId}` : actorHref ?? `/skins/${skin.id}`;
 
     return [
       {
         id: `${row.source}:${row.sortId}`,
         source: row.source,
         actorDisplayName,
+        actorHref,
         skinName: skin.name,
         skinImageUrl: skin.imageUrl,
         occurredAt: row.occurredAt.toISOString(),

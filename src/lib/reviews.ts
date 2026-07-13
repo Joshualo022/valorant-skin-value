@@ -67,7 +67,9 @@ export async function getReviewsForSkin(skinId: string, viewerId?: string) {
   const reviews = await prisma.review.findMany({
     where: { skinId },
     include: {
-      user: { select: { displayName: true, email: true, _count: { select: { reviews: true } } } },
+      user: {
+        select: { displayName: true, email: true, collectionShareSlug: true, _count: { select: { reviews: true } } },
+      },
       tags: true,
       _count: { select: { likes: true } },
       likes: viewerId ? { where: { userId: viewerId }, select: { id: true } } : false,

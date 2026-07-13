@@ -35,6 +35,11 @@ export type NotificationForList = {
   type: NotificationType;
   read: boolean;
   createdAt: string;
+  // Separate from message: fromUserDisplayName links to the actor's profile,
+  // message is just the suffix ("liked your review", "followed you", …) and
+  // links to href — same split as FeedItem (see lib/feed.ts).
+  fromUserDisplayName: string;
+  fromUserHref: string | null;
   message: string;
   href: string | null;
 };
@@ -54,7 +59,6 @@ export async function getNotificationsForUser(userId: string) {
             displayName: true,
             email: true,
             collectionShareSlug: true,
-            collectionVisibility: true,
           },
         },
       },
@@ -72,7 +76,11 @@ export async function getNotificationsForUser(userId: string) {
   const reviewById = new Map(reviews.map((r) => [r.id, r]));
 
   const notifications: NotificationForList[] = rows.map((n) => {
-    const fromUserName = resolveDisplayName(n.fromUser);
+    const fromUserDisplayName = resolveDisplayName(n.fromUser);
+    // /u/:slug resolves for everyone with a slug regardless of visibility
+    // (see lib/share-slug.ts), so this no longer needs the collectionVisibility
+    // check the old /collection/:slug link required.
+    const fromUserHref = n.fromUser.collectionShareSlug ? `/u/${n.fromUser.collectionShareSlug}` : null;
 
     if (n.type === "REVIEW_LIKED") {
       const review = n.referenceId ? reviewById.get(n.referenceId) : undefined;
@@ -81,9 +89,9 @@ export async function getNotificationsForUser(userId: string) {
         type: n.type,
         read: n.read,
         createdAt: n.createdAt.toISOString(),
-        message: review
-          ? `${fromUserName} liked your ${review.skin.name} review`
-          : `${fromUserName} liked your review`,
+        fromUserDisplayName,
+        fromUserHref,
+        message: review ? `liked your ${review.skin.name} review` : "liked your review",
         href: review ? `/skins/${review.skinId}` : null,
       };
     }
@@ -94,21 +102,23 @@ export async function getNotificationsForUser(userId: string) {
         type: n.type,
         read: n.read,
         createdAt: n.createdAt.toISOString(),
-        message: `${fromUserName} appreciated your collection ⭐`,
+        fromUserDisplayName,
+        fromUserHref,
+        message: "appreciated your collection ⭐",
         href: "/collection",
       };
     }
 
     // NEW_FOLLOWER
-    const canLinkToFromUser =
-      n.fromUser.collectionVisibility === "LINK" && !!n.fromUser.collectionShareSlug;
     return {
       id: n.id,
       type: n.type,
       read: n.read,
       createdAt: n.createdAt.toISOString(),
-      message: `${fromUserName} followed you`,
-      href: canLinkToFromUser ? `/collection/${n.fromUser.collectionShareSlug}` : null,
+      fromUserDisplayName,
+      fromUserHref,
+      message: "followed you",
+      href: fromUserHref,
     };
   });
 

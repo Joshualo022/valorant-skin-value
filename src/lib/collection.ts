@@ -84,6 +84,17 @@ export async function getLoadoutValuation(userId: string): Promise<number> {
   return valuateSkins(skins, avgValueScores);
 }
 
+// Own follower/following counts for the self-view header on /collection —
+// same numbers a visitor sees on this user's /u/:slug profile, just fetched
+// from the owner's side instead of via getCollectionAccess's slug lookup.
+export async function getFollowCounts(userId: string) {
+  const [followerCount, followingCount] = await Promise.all([
+    prisma.follow.count({ where: { followingId: userId } }),
+    prisma.follow.count({ where: { followerId: userId } }),
+  ]);
+  return { followerCount, followingCount };
+}
+
 // "You've reviewed X of Y owned skins" — reviews require ownership (see
 // POST /api/reviews), so reviewedCount is always <= ownedCount.
 export async function getCollectionProgress(userId: string) {
@@ -115,6 +126,9 @@ export type CollectionAccess = {
   // unless they're the owner, in which case the page renders a private-state
   // message instead.
   canView: boolean;
+  // Just an image URL, shown as the profile header avatar regardless of
+  // visibility — not part of the gated collection content itself.
+  flexItemImageUrl: string | null;
 };
 
 // A cheap, slug-only lookup used to decide *whether* to render the full
@@ -132,6 +146,7 @@ export async function getCollectionAccess(
       displayName: true,
       email: true,
       collectionVisibility: true,
+      flexItemSkin: { select: { imageUrl: true } },
       _count: { select: { followers: true, appraisalsReceived: true } },
     },
   });
@@ -162,6 +177,7 @@ export async function getCollectionAccess(
     isAppraised,
     isOwner,
     canView,
+    flexItemImageUrl: user.flexItemSkin?.imageUrl ?? null,
   };
 }
 

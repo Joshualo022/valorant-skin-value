@@ -9,6 +9,8 @@ type NotificationItem = {
   type: "REVIEW_LIKED" | "COLLECTION_APPRAISED" | "NEW_FOLLOWER";
   read: boolean;
   createdAt: string;
+  fromUserDisplayName: string;
+  fromUserHref: string | null;
   message: string;
   href: string | null;
 };
@@ -91,25 +93,40 @@ export function NotificationBell() {
               {notifications.length === 0 ? (
                 <p className="px-2 py-3 text-sm text-zinc-500">No notifications yet.</p>
               ) : (
-                notifications.map((n) => {
-                  const content = (
-                    <div
-                      className={`rounded-xl px-2 py-2 text-sm transition-colors ${
-                        n.read ? "text-zinc-300" : "bg-accent/10 text-foreground"
-                      } ${n.href ? "hover:bg-surface-2" : ""}`}
-                    >
-                      <p>{n.message}</p>
-                      <p className="mt-0.5 text-xs text-zinc-500">{formatRelativeTime(new Date(n.createdAt))}</p>
-                    </div>
-                  );
-                  return n.href ? (
-                    <Link key={n.id} href={n.href} onClick={() => setOpen(false)}>
-                      {content}
-                    </Link>
-                  ) : (
-                    <div key={n.id}>{content}</div>
-                  );
-                })
+                // The actor's name links to their profile, the rest of the
+                // message links to n.href (a review or the recipient's own
+                // collection) — an <a> can't contain another <a>, so these
+                // are two sibling Links rather than one wrapping the row.
+                notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className={`rounded-xl px-2 py-2 text-sm transition-colors ${
+                      n.read ? "text-zinc-300" : "bg-accent/10 text-foreground"
+                    }`}
+                  >
+                    <p>
+                      {n.fromUserHref ? (
+                        <Link
+                          href={n.fromUserHref}
+                          onClick={() => setOpen(false)}
+                          className="font-semibold hover:underline"
+                        >
+                          {n.fromUserDisplayName}
+                        </Link>
+                      ) : (
+                        <span className="font-semibold">{n.fromUserDisplayName}</span>
+                      )}{" "}
+                      {n.href ? (
+                        <Link href={n.href} onClick={() => setOpen(false)} className="hover:underline">
+                          {n.message}
+                        </Link>
+                      ) : (
+                        n.message
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-500">{formatRelativeTime(new Date(n.createdAt))}</p>
+                  </div>
+                ))
               )}
             </div>
           </div>

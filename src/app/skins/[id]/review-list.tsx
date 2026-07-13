@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { HeartButton } from "@/components/heart-button";
 import { REVIEW_TAG_LABELS, type ReviewTagValue } from "@/lib/review-tags";
 
 export type ReviewForList = {
   id: string;
   reviewerName: string;
+  reviewerSlug: string | null;
   isVerifiedReviewer: boolean;
   isEarliestReview: boolean;
   qualityScore: number;
@@ -120,7 +122,13 @@ export function ReviewList({
             <div className="flex flex-1 flex-col gap-1.5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-sm font-semibold">{review.reviewerName}</span>
+                  {review.reviewerSlug ? (
+                    <Link href={`/u/${review.reviewerSlug}`} className="text-sm font-semibold hover:underline">
+                      {review.reviewerName}
+                    </Link>
+                  ) : (
+                    <span className="text-sm font-semibold">{review.reviewerName}</span>
+                  )}
                   {review.isVerifiedReviewer && (
                     <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent">
                       Verified Reviewer

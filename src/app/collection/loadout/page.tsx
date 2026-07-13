@@ -6,6 +6,7 @@ import {
   getLoadoutValuation,
   getCollectionProgress,
   getReviewedSkinIds,
+  getFollowCounts,
 } from "@/lib/collection";
 import { getLoadoutSlots } from "@/lib/loadout";
 import { CollectionHeader } from "../collection-header";
@@ -22,13 +23,14 @@ export default async function CollectionLoadoutPage() {
   const host = (await headers()).get("host");
   const origin = host ? `${host.startsWith("localhost") ? "http" : "https"}://${host}` : "";
 
-  const [{ ownedSkins, totalValue }, loadoutValuation, { reviewedCount }, slots, reviewedSkinIds] =
+  const [{ ownedSkins, totalValue }, loadoutValuation, { reviewedCount }, slots, reviewedSkinIds, { followerCount, followingCount }] =
     await Promise.all([
       getOwnedSkinsWithValue(user.id),
       getLoadoutValuation(user.id),
       getCollectionProgress(user.id),
       getLoadoutSlots(user.id),
       getReviewedSkinIds(user.id),
+      getFollowCounts(user.id),
     ]);
 
   const allOwnedSkins = toFullOwnedSkins(ownedSkins, reviewedSkinIds);
@@ -43,6 +45,8 @@ export default async function CollectionLoadoutPage() {
         reviewedCount={reviewedCount}
         collectionVisibility={user.collectionVisibility}
         shareSlug={user.collectionShareSlug}
+        followerCount={followerCount}
+        followingCount={followingCount}
         origin={origin}
         ownedSkinsForFlexItem={allOwnedSkins}
         flexItemSkinId={user.flexItemSkinId}

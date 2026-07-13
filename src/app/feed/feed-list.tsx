@@ -8,6 +8,7 @@ import { formatRelativeTime } from "@/lib/relative-time";
 type FeedItem = {
   id: string;
   actorDisplayName: string;
+  actorHref: string | null;
   skinName: string;
   skinImageUrl: string;
   occurredAt: string;
@@ -69,28 +70,44 @@ export function FeedList({
   return (
     <div className="flex flex-col gap-2">
       {items.map((item) => (
-        <Link
+        // Outer element is a plain div, not a Link — the actor's name links
+        // to their profile while the rest of the card links to item.href (the
+        // review or collection they acted on), and an <a> can't contain
+        // another <a>, so those have to be siblings rather than nested.
+        <div
           key={item.id}
-          href={item.href}
           className="flex gap-3 rounded-2xl border border-border-subtle bg-surface p-3 transition-colors hover:border-zinc-600"
         >
-          <div className="relative h-14 w-14 shrink-0 rounded-lg bg-surface-2">
+          <Link href={item.href} className="relative h-14 w-14 shrink-0 rounded-lg bg-surface-2">
             <Image src={item.skinImageUrl} alt={item.skinName} fill className="object-contain p-1" sizes="56px" />
-          </div>
+          </Link>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <p className="text-sm text-foreground">{item.text}</p>
+            <p className="text-sm text-foreground">
+              {item.actorHref ? (
+                <Link href={item.actorHref} className="font-semibold hover:underline">
+                  {item.actorDisplayName}
+                </Link>
+              ) : (
+                <span className="font-semibold">{item.actorDisplayName}</span>
+              )}{" "}
+              <Link href={item.href} className="hover:underline">
+                {item.text}
+              </Link>
+            </p>
             {item.reviewTextPreview && (
-              <p className="truncate text-xs text-zinc-400">&ldquo;{item.reviewTextPreview}&rdquo;</p>
+              <Link href={item.href} className="block truncate text-xs text-zinc-400">
+                &ldquo;{item.reviewTextPreview}&rdquo;
+              </Link>
             )}
             {/* suppressHydrationWarning: this text is *supposed* to differ
                 between the server render and the client's first render —
                 real time elapses between them, so "38s ago" becoming "39s
                 ago" a moment later isn't a bug. */}
-            <span className="text-xs text-zinc-500" suppressHydrationWarning>
+            <Link href={item.href} className="text-xs text-zinc-500" suppressHydrationWarning>
               {formatRelativeTime(new Date(item.occurredAt))}
-            </span>
+            </Link>
           </div>
-        </Link>
+        </div>
       ))}
 
       {errorMessage && (

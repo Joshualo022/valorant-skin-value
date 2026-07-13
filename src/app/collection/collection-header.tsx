@@ -19,6 +19,8 @@ export function CollectionHeader({
   reviewedCount,
   collectionVisibility,
   shareSlug,
+  followerCount,
+  followingCount,
   origin,
   ownedSkinsForFlexItem,
   flexItemSkinId,
@@ -30,6 +32,8 @@ export function CollectionHeader({
   reviewedCount: number;
   collectionVisibility: "PRIVATE" | "LINK";
   shareSlug: string | null;
+  followerCount: number;
+  followingCount: number;
   origin: string;
   ownedSkinsForFlexItem: FullOwnedSkin[];
   flexItemSkinId: string | null;
@@ -50,6 +54,17 @@ export function CollectionHeader({
             <span className="text-sm text-zinc-400">
               {ownedCount} skin{ownedCount === 1 ? "" : "s"} owned
             </span>
+            {shareSlug && (
+              <div className="mt-0.5 flex items-center gap-3 text-xs">
+                <Link href={`/u/${shareSlug}/followers`} className="text-zinc-500 hover:text-foreground">
+                  <span className="font-semibold text-zinc-300">{followerCount}</span> follower
+                  {followerCount === 1 ? "" : "s"}
+                </Link>
+                <Link href={`/u/${shareSlug}/following`} className="text-zinc-500 hover:text-foreground">
+                  <span className="font-semibold text-zinc-300">{followingCount}</span> following
+                </Link>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-col items-start gap-3 sm:items-end">
