@@ -95,7 +95,7 @@ export async function getRecentlyReviewedSkins(limit: number) {
     take: limit,
     include: {
       skin: { include: { weapon: true, contentTier: true } },
-      user: { select: { displayName: true, email: true } },
+      user: { select: { displayName: true, email: true, collectionShareSlug: true } },
     },
   });
 }

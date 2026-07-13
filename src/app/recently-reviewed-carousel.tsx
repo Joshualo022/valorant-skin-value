@@ -13,7 +13,7 @@ export type RecentReview = {
   qualityScore: number;
   valueScore: number;
   reviewText: string | null;
-  user: { displayName: string | null; email: string };
+  user: { displayName: string | null; email: string; collectionShareSlug: string | null };
   skin: {
     id: string;
     name: string;
@@ -62,14 +62,21 @@ export function RecentlyReviewedCarousel({ reviews }: { reviews: RecentReview[] 
             const quote =
               review.reviewText?.trim() ||
               `${review.qualityScore}/10 quality · ${review.valueScore}/10 value`;
+            const reviewHref = `/skins/${review.skin.id}#review-${review.id}`;
+            const reviewerHref = review.user.collectionShareSlug ? `/u/${review.user.collectionShareSlug}` : null;
 
+            // Not itself a Link — the byline links to the reviewer's profile
+            // while the rest of the card links to the review, and an <a>
+            // can't contain another <a>, so those have to be siblings.
             return (
-              <Link
+              <div
                 key={review.id}
-                href={`/skins/${review.skin.id}`}
                 className="flex w-full shrink-0 flex-col items-center gap-5 p-6 text-center sm:flex-row sm:text-left"
               >
-                <div className={`relative h-28 w-40 shrink-0 rounded-xl bg-surface-2 ${tier.ringGlow}`}>
+                <Link
+                  href={reviewHref}
+                  className={`relative h-28 w-40 shrink-0 rounded-xl bg-surface-2 ${tier.ringGlow}`}
+                >
                   <Image
                     src={review.skin.imageUrl}
                     alt={review.skin.name}
@@ -77,17 +84,30 @@ export function RecentlyReviewedCarousel({ reviews }: { reviews: RecentReview[] 
                     className="object-contain p-2"
                     sizes="160px"
                   />
-                </div>
+                </Link>
                 <div className="flex flex-col gap-1.5">
-                  <div className="text-xs text-zinc-500">
+                  <Link href={reviewHref} className="text-xs text-zinc-500">
                     {review.skin.weapon.name} ·{" "}
                     <span className={tier.text}>{review.skin.contentTier.name}</span>
-                  </div>
-                  <div className="font-display text-lg font-bold">{review.skin.name}</div>
-                  <p className="text-sm text-zinc-300">&ldquo;{quote}&rdquo;</p>
-                  <span className="text-xs text-zinc-500">— {resolveDisplayName(review.user)}</span>
+                  </Link>
+                  <Link href={reviewHref} className="font-display text-lg font-bold">
+                    {review.skin.name}
+                  </Link>
+                  <Link href={reviewHref} className="text-sm text-zinc-300">
+                    &ldquo;{quote}&rdquo;
+                  </Link>
+                  <span className="text-xs text-zinc-500">
+                    —{" "}
+                    {reviewerHref ? (
+                      <Link href={reviewerHref} className="hover:underline">
+                        {resolveDisplayName(review.user)}
+                      </Link>
+                    ) : (
+                      resolveDisplayName(review.user)
+                    )}
+                  </span>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

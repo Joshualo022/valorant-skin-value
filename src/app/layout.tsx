@@ -109,10 +109,10 @@ export default async function RootLayout({
                     <span className="hidden sm:inline">Skin Catalog</span>
                   </Link>
                   <Link
-                    href="/feed"
+                    href="/social"
                     className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"
                   >
-                    Feed
+                    Social
                   </Link>
                   <Link
                     href="/wishlist"
@@ -125,7 +125,11 @@ export default async function RootLayout({
                     <span className="hidden sm:inline">Liked</span>
                   </Link>
                   <NotificationBell />
-                  <NavUserMenu displayName={resolveDisplayName(user)} email={user.email} />
+                  <NavUserMenu
+                    displayName={resolveDisplayName(user)}
+                    email={user.email}
+                    profileSlug={user.collectionShareSlug}
+                  />
                 </>
               ) : (
                 <>

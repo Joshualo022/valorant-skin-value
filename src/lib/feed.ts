@@ -20,6 +20,10 @@ type RawFeedRow = {
 export type FeedItem = {
   id: string;
   source: FeedSource;
+  // Grouping key for render-time event collapsing (see FeedList in
+  // src/app/social/feed-list.tsx) — consecutive items sharing (actorId,
+  // source) collapse into one row. Not used for anything else.
+  actorId: string;
   actorDisplayName: string;
   // Separate from href below: the actor's name links to their profile, the
   // rest of the card links to the thing they did (a review or collection).
@@ -176,6 +180,7 @@ export async function getFeedPage(
       {
         id: `${row.source}:${row.sortId}`,
         source: row.source,
+        actorId: row.actorId,
         actorDisplayName,
         actorHref,
         skinName: skin.name,

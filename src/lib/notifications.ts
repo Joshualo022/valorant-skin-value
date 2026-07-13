@@ -30,6 +30,13 @@ export async function notify({
   await prisma.notification.create({ data: { userId, fromUserId, type, referenceId } });
 }
 
+// Cheap count-only query for the Notifications tab's pill label (see
+// /social/page.tsx) — avoids fetching and resolving full notification rows
+// just to render a badge when that tab isn't even the active one.
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  return prisma.notification.count({ where: { userId, read: false } });
+}
+
 export type NotificationForList = {
   id: string;
   type: NotificationType;
@@ -44,15 +51,34 @@ export type NotificationForList = {
   href: string | null;
 };
 
-// Fetches the 15 most recent notifications for a user plus their total
-// unread count, resolving each type's display text/link server-side so the
-// bell dropdown can just render strings — see GET /api/me/notifications.
-export async function getNotificationsForUser(userId: string) {
-  const [rows, unreadCount] = await Promise.all([
+export type NotificationCursor = { createdAt: string; id: string };
+
+// Same keyset-pagination shape as getFollowers/getFollowing (see
+// lib/follows.ts) — createdAt alone isn't a unique sort key, so every page
+// boundary needs the row id as a tiebreaker too.
+function cursorWhere(cursor: NotificationCursor | null | undefined) {
+  if (!cursor) return {};
+  return {
+    OR: [
+      { createdAt: { lt: new Date(cursor.createdAt) } },
+      { createdAt: new Date(cursor.createdAt), id: { lt: cursor.id } },
+    ],
+  };
+}
+
+// Resolves each type's display text/link server-side so callers (bell
+// dropdown preview, full Notifications tab) just render strings — see
+// GET /api/me/notifications. `limit` defaults to 15 for the bell; the
+// Notifications tab passes a larger limit plus a cursor to page further.
+export async function getNotificationsForUser(
+  userId: string,
+  { cursor, limit = 15 }: { cursor?: NotificationCursor | null; limit?: number } = {}
+) {
+  const [rows, unreadCount, recipient] = await Promise.all([
     prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 15,
+      where: { userId, ...cursorWhere(cursor) },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: limit,
       include: {
         fromUser: {
           select: {
@@ -64,9 +90,15 @@ export async function getNotificationsForUser(userId: string) {
       },
     }),
     prisma.notification.count({ where: { userId, read: false } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { collectionShareSlug: true } }),
   ]);
+  const ownHref = recipient?.collectionShareSlug ? `/u/${recipient.collectionShareSlug}` : null;
 
-  const reviewIds = rows.filter((n) => n.type === "REVIEW_LIKED" && n.referenceId).map((n) => n.referenceId!);
+  // REVIEW_LIKED and REVIEW_COMMENTED both store the review id as
+  // referenceId and both deep-link to the same review anchor.
+  const reviewIds = rows
+    .filter((n) => (n.type === "REVIEW_LIKED" || n.type === "REVIEW_COMMENTED") && n.referenceId)
+    .map((n) => n.referenceId!);
   const reviews = reviewIds.length
     ? await prisma.review.findMany({
         where: { id: { in: reviewIds } },
@@ -82,8 +114,9 @@ export async function getNotificationsForUser(userId: string) {
     // check the old /collection/:slug link required.
     const fromUserHref = n.fromUser.collectionShareSlug ? `/u/${n.fromUser.collectionShareSlug}` : null;
 
-    if (n.type === "REVIEW_LIKED") {
+    if (n.type === "REVIEW_LIKED" || n.type === "REVIEW_COMMENTED") {
       const review = n.referenceId ? reviewById.get(n.referenceId) : undefined;
+      const verb = n.type === "REVIEW_LIKED" ? "liked" : "commented on";
       return {
         id: n.id,
         type: n.type,
@@ -91,8 +124,11 @@ export async function getNotificationsForUser(userId: string) {
         createdAt: n.createdAt.toISOString(),
         fromUserDisplayName,
         fromUserHref,
-        message: review ? `liked your ${review.skin.name} review` : "liked your review",
-        href: review ? `/skins/${review.skinId}` : null,
+        message: review ? `${verb} your ${review.skin.name} review` : `${verb} your review`,
+        // Reviews get id="review-[id]" on the skin page (see review-list.tsx)
+        // so this anchor scrolls straight to the review being referenced,
+        // not just the top of a skin with many reviews.
+        href: review ? `/skins/${review.skinId}#review-${review.id}` : null,
       };
     }
 
@@ -105,7 +141,7 @@ export async function getNotificationsForUser(userId: string) {
         fromUserDisplayName,
         fromUserHref,
         message: "appreciated your collection ⭐",
-        href: "/collection",
+        href: ownHref,
       };
     }
 
@@ -122,5 +158,8 @@ export async function getNotificationsForUser(userId: string) {
     };
   });
 
-  return { notifications, unreadCount };
+  const nextCursor: NotificationCursor | null =
+    rows.length === limit ? { createdAt: rows[rows.length - 1].createdAt.toISOString(), id: rows[rows.length - 1].id } : null;
+
+  return { notifications, unreadCount, nextCursor };
 }

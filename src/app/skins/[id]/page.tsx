@@ -3,6 +3,7 @@ import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSkinWithAggregateScores, getReviewsForSkin } from "@/lib/reviews";
+import { getCommentsForReviews } from "@/lib/comments";
 import { getWishlistCount } from "@/lib/wishlist";
 import { resolveDisplayName } from "@/lib/user";
 import { getTierStyle } from "@/lib/tier-style";
@@ -32,6 +33,9 @@ export default async function SkinDetailPage({
   }
 
   const { skin, reviewCount, avgQualityScore, avgValueScore, wouldRebuyPercent } = result;
+  const commentsByReview = await getCommentsForReviews(
+    reviews.map((r) => ({ id: r.id, userId: r.userId, editedAt: r.editedAt }))
+  );
 
   let ownsSkin = false;
   let existingReview = null;
@@ -135,6 +139,7 @@ export default async function SkinDetailPage({
         isLoggedIn={!!user}
         ownsSkin={ownsSkin}
         reviewCount={reviewCount}
+        profileSlug={user?.collectionShareSlug ?? null}
         existingReview={
           existingReview
             ? {
@@ -165,6 +170,7 @@ export default async function SkinDetailPage({
       ) : (
         <ReviewList
           isLoggedIn={!!user}
+          viewerId={user?.id ?? null}
           reviews={reviews.map((review) => ({
             id: review.id,
             reviewerName: resolveDisplayName(review.user),
@@ -176,9 +182,11 @@ export default async function SkinDetailPage({
             wouldRebuy: review.wouldRebuy,
             reviewText: review.reviewText,
             createdAtLabel: new Date(review.createdAt).toLocaleDateString(),
+            editedAtLabel: review.editedAt ? new Date(review.editedAt).toLocaleDateString() : null,
             tags: review.tags,
             likeCount: review.likeCount,
             isLikedByViewer: review.isLikedByViewer,
+            comments: commentsByReview.get(review.id) ?? [],
           }))}
         />
       )}

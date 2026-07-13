@@ -97,6 +97,7 @@ export function ReviewSection({
   ownsSkin,
   existingReview,
   reviewCount,
+  profileSlug,
 }: {
   skinId: string;
   skinName: string;
@@ -110,6 +111,9 @@ export function ReviewSection({
   // this component, since it needs to render even when this section is a
   // login/ownership prompt instead of the actual form.
   reviewCount: number;
+  // Powers the success modal's "View your profile" link — closes the loop
+  // from contributing a review back to the social layer.
+  profileSlug: string | null;
 }) {
   const router = useRouter();
   const [justAdded, setJustAdded] = useState(false);
@@ -230,6 +234,15 @@ export function ReviewSection({
             >
               Back to collection
             </button>
+            {profileSlug && (
+              <button
+                type="button"
+                onClick={() => router.push(`/u/${profileSlug}`)}
+                className="cursor-pointer text-xs text-zinc-500 underline decoration-dotted underline-offset-2 hover:text-foreground"
+              >
+                View your profile
+              </button>
+            )}
           </div>
         </div>
       </div>

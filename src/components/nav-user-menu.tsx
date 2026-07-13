@@ -7,9 +7,11 @@ import { logout } from "@/app/actions/auth";
 export function NavUserMenu({
   displayName,
   email,
+  profileSlug,
 }: {
   displayName: string;
   email: string;
+  profileSlug: string | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -35,6 +37,15 @@ export function NavUserMenu({
               <div className="truncate text-xs text-zinc-500">{email}</div>
             </div>
             <div className="h-px bg-border-subtle" />
+            {profileSlug && (
+              <Link
+                href={`/u/${profileSlug}`}
+                onClick={() => setOpen(false)}
+                className="rounded-xl px-2 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                View profile
+              </Link>
+            )}
             <Link
               href="/settings"
               onClick={() => setOpen(false)}

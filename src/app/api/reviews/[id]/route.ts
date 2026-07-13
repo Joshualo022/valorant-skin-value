@@ -28,13 +28,24 @@ export async function PATCH(
     return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
+  const nextReviewText = body.reviewText || null;
+  // Only stamp editedAt when something actually changed — a no-op save
+  // (e.g. re-submitting the same form) shouldn't make comments look stale
+  // against a review that never really moved.
+  const didChange =
+    existing.qualityScore !== body.qualityScore ||
+    existing.valueScore !== body.valueScore ||
+    existing.wouldRebuy !== body.wouldRebuy ||
+    existing.reviewText !== nextReviewText;
+
   const review = await prisma.review.update({
     where: { id },
     data: {
       qualityScore: body.qualityScore,
       valueScore: body.valueScore,
       wouldRebuy: body.wouldRebuy,
-      reviewText: body.reviewText || null,
+      reviewText: nextReviewText,
+      ...(didChange ? { editedAt: new Date() } : {}),
     },
   });
 

@@ -46,6 +46,7 @@ model User {
   appraisalsReceived CollectionAppraisal[] @relation("AppraisalsReceived")
   notificationsReceived Notification[] @relation("NotificationsReceived")
   notificationsSent     Notification[] @relation("NotificationsSent")
+  comments               Comment[]
 
   @@map("users")
 }
@@ -87,6 +88,7 @@ enum NotificationType {
   REVIEW_LIKED
   COLLECTION_APPRAISED
   NEW_FOLLOWER
+  REVIEW_COMMENTED
 
   @@map("notification_type")
 }
@@ -254,12 +256,17 @@ model Review {
   reviewText         String?             @map("review_text")
   verificationStatus VerificationStatus  @default(self_reported) @map("verification_status")
   createdAt          DateTime            @default(now()) @map("created_at")
+  // Set only when scores or text actually change on an edit (not on a no-op
+  // save) — lets comments render a "written before this review was edited"
+  // marker (see src/lib/comments.ts) without a Comment-side schema change.
+  editedAt           DateTime?           @map("edited_at")
 
-  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skin  Skin         @relation(fields: [skinId], references: [id])
-  flags ReviewFlag[]
-  tags  ReviewTag[]
-  likes ReviewLike[]
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skin     Skin         @relation(fields: [skinId], references: [id])
+  flags    ReviewFlag[]
+  tags     ReviewTag[]
+  likes    ReviewLike[]
+  comments Comment[]
 
   @@unique([userId, skinId])
   @@map("reviews")
@@ -276,6 +283,23 @@ model ReviewLike {
 
   @@unique([reviewId, userId])
   @@map("review_likes")
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  reviewId  String    @map("review_id")
+  userId    String    @map("user_id")
+  body      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  // Soft delete — a deleted comment's row stays (so a reply-count or an
+  // audit trail could reference it later) but is filtered out of every list.
+  deletedAt DateTime? @map("deleted_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+  @@map("comments")
 }
 
 enum ReviewTagType {

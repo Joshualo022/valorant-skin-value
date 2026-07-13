@@ -6,7 +6,7 @@ import { formatRelativeTime } from "@/lib/relative-time";
 
 type NotificationItem = {
   id: string;
-  type: "REVIEW_LIKED" | "COLLECTION_APPRAISED" | "NEW_FOLLOWER";
+  type: "REVIEW_LIKED" | "COLLECTION_APPRAISED" | "NEW_FOLLOWER" | "REVIEW_COMMENTED";
   read: boolean;
   createdAt: string;
   fromUserDisplayName: string;
@@ -25,10 +25,14 @@ function BellIcon() {
 }
 
 // Fetched once on page load, no polling — the count/list are only refreshed
-// by a hard reload. Opening the dropdown marks everything currently loaded
-// (the 15 most recent) as read in one batch call, same pattern as the
-// optimistic toggles elsewhere (FollowButton, HeartButton): flip local state
-// immediately, don't wait on the round trip to feel responsive.
+// by a hard reload. A preview of the latest 5 (full browsable history lives
+// at /social?tab=notifications — see the "View all" footer below). Opening
+// the dropdown marks everything currently loaded as read in one batch call,
+// same pattern as the optimistic toggles elsewhere (FollowButton,
+// HeartButton): flip local state immediately, don't wait on the round trip
+// to feel responsive.
+const PREVIEW_LIMIT = 5;
+
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -36,7 +40,7 @@ export function NotificationBell() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetch("/api/me/notifications")
+    fetch(`/api/me/notifications?limit=${PREVIEW_LIMIT}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { notifications: NotificationItem[]; unreadCount: number } | null) => {
         if (!data) return;
@@ -129,6 +133,13 @@ export function NotificationBell() {
                 ))
               )}
             </div>
+            <Link
+              href="/social?tab=notifications"
+              onClick={() => setOpen(false)}
+              className="mt-1 block rounded-xl px-2 py-1.5 text-center text-xs font-semibold text-zinc-400 transition-colors hover:bg-surface-2 hover:text-foreground"
+            >
+              View all
+            </Link>
           </div>
         </>
       )}

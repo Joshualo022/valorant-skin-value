@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { HeartButton } from "@/components/heart-button";
 import { REVIEW_TAG_LABELS, type ReviewTagValue } from "@/lib/review-tags";
+import { CommentThread } from "./comment-thread";
+import type { CommentForList } from "@/lib/comments";
 
 export type ReviewForList = {
   id: string;
@@ -16,9 +18,11 @@ export type ReviewForList = {
   wouldRebuy: boolean;
   reviewText: string | null;
   createdAtLabel: string;
+  editedAtLabel: string | null;
   tags: { id: string; tag: ReviewTagValue }[];
   likeCount: number;
   isLikedByViewer: boolean;
+  comments: CommentForList[];
 };
 
 type SortMode = "recent" | "liked";
@@ -31,9 +35,11 @@ type SortMode = "recent" | "liked";
 export function ReviewList({
   reviews,
   isLoggedIn,
+  viewerId,
 }: {
   reviews: ReviewForList[];
   isLoggedIn: boolean;
+  viewerId: string | null;
 }) {
   const [sortMode, setSortMode] = useState<SortMode>("recent");
   const [likeState, setLikeState] = useState(
@@ -141,7 +147,12 @@ export function ReviewList({
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-500">{review.createdAtLabel}</span>
+                  <span className="text-xs text-zinc-500">
+                    {review.createdAtLabel}
+                    {review.editedAtLabel && (
+                      <span title={`Last edited ${review.editedAtLabel}`}> · edited</span>
+                    )}
+                  </span>
                   <HeartButton
                     liked={like.liked}
                     count={like.count}
@@ -176,6 +187,12 @@ export function ReviewList({
                 ))}
               </div>
               {review.reviewText && <p className="text-sm text-zinc-300">{review.reviewText}</p>}
+              <CommentThread
+                reviewId={review.id}
+                initialComments={review.comments}
+                isLoggedIn={isLoggedIn}
+                viewerId={viewerId}
+              />
             </div>
           </div>
         );
