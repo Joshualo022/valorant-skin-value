@@ -91,6 +91,13 @@ export default async function RootLayout({
               </span>
             </Link>
             <nav className="flex items-center gap-1 text-sm sm:gap-2">
+              <Link
+                href="/catalog"
+                className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"
+              >
+                <span className="sm:hidden">Explore</span>
+                <span className="hidden sm:inline">Explore skins</span>
+              </Link>
               {user ? (
                 <>
                   <Link
@@ -99,13 +106,6 @@ export default async function RootLayout({
                   >
                     <span className="sm:hidden">Mine</span>
                     <span className="hidden sm:inline">My Collection</span>
-                  </Link>
-                  <Link
-                    href="/catalog"
-                    className="rounded-full px-2.5 py-1.5 font-medium text-zinc-300 transition-colors hover:bg-surface hover:text-foreground sm:px-3"
-                  >
-                    <span className="sm:hidden">Catalog</span>
-                    <span className="hidden sm:inline">Skin Catalog</span>
                   </Link>
                   <Link
                     href="/social"

@@ -46,11 +46,13 @@ export function SkinCatalog({
   tiers,
   initialOwnedSkinIds,
   totalValue,
+  isLoggedIn,
 }: {
   weapons: Weapon[];
   tiers: ContentTierOption[];
   initialOwnedSkinIds: string[];
   totalValue: number;
+  isLoggedIn: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -222,6 +224,13 @@ export function SkinCatalog({
   }, [nextCursor, isLoadingInitial, isLoadingMore, fetchPage]);
 
   async function toggleOwnership(skinId: string) {
+    // Mirrors HeartButton's auth-gating: logged-out visitors can browse the
+    // catalog freely, but the write itself needs an account.
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
+
     const isOwned = ownedSkinIds.has(skinId);
     setPendingOwnershipSkinId(skinId);
     setErrorMessage(null);
@@ -308,29 +317,38 @@ export function SkinCatalog({
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-6">
       <div className="sticky top-14 z-10 flex flex-col gap-3 border-b border-border-subtle/80 bg-background/90 py-3 backdrop-blur-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
-        <h1 className="font-display text-xl font-bold">Skin Catalog</h1>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5 text-lg font-medium">
-            Total value:
-            <VpAmount
-              amount={totalValue}
-              iconSize={16}
-              className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-transparent"
-            />
+        <h1 className="font-display text-xl font-bold">Explore skins</h1>
+        {isLoggedIn ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 text-lg font-medium">
+              Total value:
+              <VpAmount
+                amount={totalValue}
+                iconSize={16}
+                className="bg-gradient-to-r from-accent to-accent-strong bg-clip-text text-transparent"
+              />
+            </div>
+            <Link
+              href="/collection"
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
+            >
+              My collection →
+            </Link>
+            <Link
+              href="/wishlist"
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
+            >
+              My liked skins →
+            </Link>
           </div>
+        ) : (
           <Link
-            href="/collection"
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
+            href="/login"
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-accent-strong px-4 py-2 text-sm font-semibold text-white transition-transform hover:scale-105"
           >
-            My collection →
+            Log in to build your collection →
           </Link>
-          <Link
-            href="/wishlist"
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-accent/50"
-          >
-            My liked skins →
-          </Link>
-        </div>
+        )}
       </div>
 
       {errorMessage && (
@@ -498,7 +516,7 @@ export function SkinCatalog({
                       liked={skin.isLikedByViewer}
                       count={skin.likeCount}
                       pending={pendingLikeSkinId === skin.id}
-                      isLoggedIn
+                      isLoggedIn={isLoggedIn}
                       onToggle={() => toggleLike(skin.id)}
                       className="absolute bottom-1 right-1"
                     />

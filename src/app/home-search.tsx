@@ -44,13 +44,13 @@ export function HomeSearch() {
   }
 
   return (
-    <div className="flex w-full max-w-xl flex-col gap-3">
+    <div className="flex w-full flex-col gap-3">
       <div className="relative">
         <svg
           viewBox="0 0 24 24"
           fill="none"
           aria-hidden="true"
-          className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500"
+          className="pointer-events-none absolute left-6 top-1/2 h-6 w-6 -translate-y-1/2 text-zinc-500"
         >
           <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
           <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -60,7 +60,7 @@ export function HomeSearch() {
           value={query}
           onChange={handleChange}
           placeholder="Search for a skin to see its reviews..."
-          className="w-full rounded-full border border-border-subtle bg-surface py-4 pl-12 pr-6 text-lg text-foreground placeholder:text-zinc-500 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
+          className="w-full rounded-full border border-border-subtle bg-surface py-5 pl-14 pr-6 text-xl text-foreground shadow-[0_0_40px_-12px_rgba(255,47,146,0.35)] placeholder:text-zinc-500 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
           autoFocus
         />
       </div>
