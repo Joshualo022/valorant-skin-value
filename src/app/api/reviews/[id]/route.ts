@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { validateReviewInput, setReviewTags } from "@/lib/reviews";
 import type { ReviewTagValue } from "@/lib/review-tags";
+import { checkRateLimit, tooManyRequestsResponse } from "@/lib/rate-limit";
 
 export async function PATCH(
   request: Request,
@@ -12,6 +13,9 @@ export async function PATCH(
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const limit = await checkRateLimit("review", user.id);
+  if (!limit.ok) return tooManyRequestsResponse(limit.retryAfterSeconds);
 
   const { id } = await params;
   const existing = await prisma.review.findUnique({ where: { id } });

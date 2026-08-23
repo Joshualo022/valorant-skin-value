@@ -41,12 +41,21 @@ export function CommentThread({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body }),
       });
-      if (!res.ok) throw new Error("Request failed");
+      if (!res.ok) {
+        // Surface the server's own message (rate-limit "too fast", validation
+        // errors) rather than a generic string; fall back if there's no body.
+        const errorBody = await res.json().catch(() => ({}));
+        throw new Error(errorBody.error || "Request failed");
+      }
       const data = (await res.json()) as { comment: CommentForList };
       setComments((prev) => [...prev, data.comment]);
       setDraft("");
-    } catch {
-      setErrorMessage("Something went wrong posting your comment — please try again.");
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error && err.message !== "Request failed"
+          ? err.message
+          : "Something went wrong posting your comment — please try again."
+      );
     } finally {
       setSubmitting(false);
     }

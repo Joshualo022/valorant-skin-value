@@ -1,7 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export type AuthFormState = { error?: string; message?: string } | undefined;
 
@@ -28,6 +30,17 @@ export async function signup(
 ): Promise<AuthFormState> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+
+  // Keyed by IP since there's no user yet — caps scripted mass account
+  // creation. Supabase Auth also rate-limits its own endpoints, so this is a
+  // second, app-controlled layer. Server actions don't receive the Request,
+  // so the IP comes from the forwarded header via next/headers.
+  const forwarded = (await headers()).get("x-forwarded-for");
+  const ip = forwarded?.split(",")[0]?.trim() || "unknown";
+  const limit = await checkRateLimit("signup", ip);
+  if (!limit.ok) {
+    return { error: "Too many signup attempts — please wait a bit and try again." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({ email, password });

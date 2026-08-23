@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notifications";
+import { checkRateLimit, tooManyRequestsResponse } from "@/lib/rate-limit";
 
 // Single toggle endpoint, same reasoning as POST /api/reviews/:id/like — the
 // client only knows "the button was tapped," not which state it's currently
@@ -15,6 +16,9 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const limit = await checkRateLimit("social", user.id);
+  if (!limit.ok) return tooManyRequestsResponse(limit.retryAfterSeconds);
 
   const { userId: followingId } = await params;
   if (followingId === user.id) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notifications";
+import { checkRateLimit, tooManyRequestsResponse } from "@/lib/rate-limit";
 
 // Single toggle endpoint rather than the wishlist's split POST/DELETE pair —
 // the client only knows "the heart was tapped," not which state it's
@@ -15,6 +16,9 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const limit = await checkRateLimit("social", user.id);
+  if (!limit.ok) return tooManyRequestsResponse(limit.retryAfterSeconds);
 
   const { id: reviewId } = await params;
   const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { id: true, userId: true } });
