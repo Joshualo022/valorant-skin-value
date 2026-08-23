@@ -32,6 +32,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Skin not found" }, { status: 404 });
   }
 
+  // Mirrors PUT /api/me/loadout/:weaponId's chroma check — without it, a
+  // hand-crafted request could pair a skin with a chroma belonging to a
+  // completely different skin, and that mismatched pair would later be
+  // trusted unvalidated as the loadout's default chroma (see
+  // `resolvedChromaId` in the loadout route).
+  if (chromaId) {
+    const chroma = await prisma.chroma.findUnique({
+      where: { id: chromaId },
+      select: { skinId: true },
+    });
+    if (!chroma || chroma.skinId !== skinId) {
+      return NextResponse.json({ error: "Chroma does not belong to this skin" }, { status: 400 });
+    }
+  }
+
   const owned = await prisma.userOwnedSkin.upsert({
     where: { userId_skinId: { userId: user.id, skinId } },
     update: { chromaId },

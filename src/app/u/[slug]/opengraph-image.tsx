@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { getSharedCollectionBySlug } from "@/lib/collection";
+import { getSharedCollectionBySlug, getCollectionAccess } from "@/lib/collection";
 
 export const alt = "Valorant Skin Value — profile";
 export const size = { width: 1200, height: 630 };
@@ -46,7 +46,19 @@ async function loadVpIconDataUri(): Promise<string> {
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [shared, vpIconSrc] = await Promise.all([getSharedCollectionBySlug(slug), loadVpIconDataUri()]);
+
+  // This route is fetched unauthenticated by link-unfurling crawlers (no
+  // session, no viewer) — so canView here reduces to exactly
+  // `collectionVisibility === "LINK"`. Checked before touching
+  // getSharedCollectionBySlug, which has no visibility awareness of its own
+  // (see src/lib/collection.ts) and would otherwise happily return a
+  // PRIVATE collection's value/loadout/flex item to this same unauthenticated
+  // caller — the bug this check exists to close.
+  const access = await getCollectionAccess(slug);
+  const [shared, vpIconSrc] = await Promise.all([
+    access?.canView ? getSharedCollectionBySlug(slug) : Promise.resolve(null),
+    loadVpIconDataUri(),
+  ]);
 
   // Falls back to a bare wordmark card if the link was revoked between a
   // platform crawling it and someone actually clicking it, or if this

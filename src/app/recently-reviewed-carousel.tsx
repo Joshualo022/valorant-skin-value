@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getTierStyle } from "@/lib/tier-style";
-import { resolveDisplayName } from "@/lib/user";
 
 const AUTO_ADVANCE_MS = 4500;
 
@@ -13,7 +12,7 @@ export type RecentReview = {
   qualityScore: number;
   valueScore: number;
   reviewText: string | null;
-  user: { displayName: string | null; email: string; collectionShareSlug: string | null };
+  user: { displayName: string; collectionShareSlug: string | null };
   skin: {
     id: string;
     name: string;
@@ -100,10 +99,10 @@ export function RecentlyReviewedCarousel({ reviews }: { reviews: RecentReview[] 
                     —{" "}
                     {reviewerHref ? (
                       <Link href={reviewerHref} className="hover:underline">
-                        {resolveDisplayName(review.user)}
+                        {review.user.displayName}
                       </Link>
                     ) : (
-                      resolveDisplayName(review.user)
+                      review.user.displayName
                     )}
                   </span>
                 </div>

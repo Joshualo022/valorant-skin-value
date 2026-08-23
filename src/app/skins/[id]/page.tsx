@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { getSkinWithAggregateScores, getReviewsForSkin } from "@/lib/reviews";
 import { getCommentsForReviews } from "@/lib/comments";
 import { getWishlistCount } from "@/lib/wishlist";
-import { resolveDisplayName } from "@/lib/user";
 import { getTierStyle } from "@/lib/tier-style";
 import { getSkinPrice } from "@/lib/pricing";
 import { isVerifiedReviewer } from "@/lib/incentives";
@@ -173,10 +172,10 @@ export default async function SkinDetailPage({
           viewerId={user?.id ?? null}
           reviews={reviews.map((review) => ({
             id: review.id,
-            reviewerName: resolveDisplayName(review.user),
+            reviewerName: review.user.displayName,
             reviewerSlug: review.user.collectionShareSlug,
             reviewerAvatarId: review.user.avatarId,
-            isVerifiedReviewer: isVerifiedReviewer(review.user._count.reviews),
+            isVerifiedReviewer: isVerifiedReviewer(review.user.reviewCount),
             isEarliestReview: review.id === earliestReviewId,
             qualityScore: review.qualityScore,
             valueScore: review.valueScore,

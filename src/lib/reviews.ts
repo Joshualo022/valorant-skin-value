@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { REVIEW_TAG_VALUES, type ReviewTagValue } from "@/lib/review-tags";
+import { resolveDisplayName } from "@/lib/user";
 
 // The core aggregation for a skin's public-facing scores: average quality
 // and value scores across all reviews, plus the share of reviewers who'd
@@ -83,8 +84,18 @@ export async function getReviewsForSkin(skinId: string, viewerId?: string) {
     orderBy: { createdAt: "desc" },
   });
 
-  return reviews.map(({ _count, likes, ...review }) => ({
+  // email only exists on `user` to feed resolveDisplayName's fallback — it
+  // never leaves this function. Resolving the name here (rather than at
+  // each call site) means every caller gets a safe shape by construction,
+  // instead of relying on each one to remember to strip it.
+  return reviews.map(({ _count, likes, user, ...review }) => ({
     ...review,
+    user: {
+      displayName: resolveDisplayName(user),
+      collectionShareSlug: user.collectionShareSlug,
+      avatarId: user.avatarId,
+      reviewCount: user._count.reviews,
+    },
     likeCount: _count.likes,
     isLikedByViewer: viewerId ? likes.length > 0 : false,
   }));
@@ -95,7 +106,7 @@ export async function getReviewsForSkin(skinId: string, viewerId?: string) {
 // newest review — so a skin reviewed twice doesn't crowd out others, and the
 // list naturally reflects real recent activity rather than a stored feed.
 export async function getRecentlyReviewedSkins(limit: number) {
-  return prisma.review.findMany({
+  const reviews = await prisma.review.findMany({
     distinct: ["skinId"],
     orderBy: { createdAt: "desc" },
     take: limit,
@@ -104,6 +115,16 @@ export async function getRecentlyReviewedSkins(limit: number) {
       user: { select: { displayName: true, email: true, collectionShareSlug: true } },
     },
   });
+
+  // Resolved here, not at the render call site — this return value is
+  // passed straight into a Client Component prop on the home page, and
+  // anything on it (email included) gets serialized to the browser
+  // regardless of what the component actually renders. See getReviewsForSkin
+  // above for the same reasoning.
+  return reviews.map(({ user, ...review }) => ({
+    ...review,
+    user: { displayName: resolveDisplayName(user), collectionShareSlug: user.collectionShareSlug },
+  }));
 }
 
 export function validateReviewInput(body: {

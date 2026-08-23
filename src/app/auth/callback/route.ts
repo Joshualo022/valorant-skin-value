@@ -6,10 +6,23 @@ import { createClient } from "@/lib/supabase/server";
 // here with its own one-time `code`. exchangeCodeForSession trades that code
 // for a real session and writes the session cookie via the server client's
 // cookie handlers (see src/lib/supabase/server.ts) before we redirect home.
+// `next` has to be an in-app path, not an arbitrary URL — otherwise a link
+// like /auth/callback?...&next=@evil.com/ redirects here (a valid URL where
+// "myradianite.com" is just the userinfo section and evil.com is the real
+// host) straight after a real login, which reads as trustworthy since the
+// user just came from the genuine Google consent screen. Requiring exactly
+// one leading slash rules out both bare hostnames ("evil.com") and
+// protocol-relative ones ("//evil.com", which browsers treat as same-scheme
+// to whatever host follows).
+function isSafeRedirectPath(path: string): boolean {
+  return path.startsWith("/") && !path.startsWith("//");
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
+  const requestedNext = searchParams.get("next");
+  const next = requestedNext && isSafeRedirectPath(requestedNext) ? requestedNext : "/";
 
   if (code) {
     const supabase = await createClient();
