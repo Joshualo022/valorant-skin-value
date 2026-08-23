@@ -11,18 +11,28 @@ import { NextResponse } from "next/server";
 // Two deliberate "fail open" cases, both returning { ok: true } (allow):
 //   1. Upstash isn't configured (no env vars) — e.g. local dev, or before
 //      the Upstash project is provisioned. The whole feature is inert until
-//      UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set, so this
-//      code can ship and sit dormant with zero behavior change.
+//      the env vars below are set, so this code can ship and sit dormant
+//      with zero behavior change.
 //   2. Upstash is configured but unreachable at request time. A Redis
 //      outage must never take down the ability to post a comment — the
 //      protection lapsing is a better failure than blocking real users.
+//
+// Env var names: KV_REST_API_URL / KV_REST_API_TOKEN, not the "native"
+// UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN that @upstash/redis's
+// own Redis.fromEnv() helper looks for. Vercel's Marketplace integration for
+// Upstash provisions a real Upstash database but injects it under the
+// legacy `KV_` prefix (a holdover from when Vercel KV was its own product,
+// before it was rebuilt on top of Upstash) — so the client is built by hand
+// here, pointed at the names Vercel actually sets, rather than via
+// fromEnv()'s hardcoded lookup.
 
-const hasUpstashConfig =
-  !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+const restUrl = process.env.KV_REST_API_URL;
+const restToken = process.env.KV_REST_API_TOKEN;
+const hasUpstashConfig = !!restUrl && !!restToken;
 
-// Redis.fromEnv() throws when the env vars are absent, so only build it when
-// configured. One client is shared across every limiter below.
-const redis = hasUpstashConfig ? Redis.fromEnv() : null;
+// Only build the client when configured. One client is shared across every
+// limiter below.
+const redis = hasUpstashConfig ? new Redis({ url: restUrl, token: restToken }) : null;
 
 type Window = `${number} ${"s" | "m" | "h" | "d"}`;
 
